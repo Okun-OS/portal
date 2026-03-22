@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – Kunden</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" data-key="dashboard" onclick="window.location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Verwaltung</span></div>
+      <div class="nav-item active" data-key="customers" onclick="window.location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" data-key="leads" onclick="window.location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-item" data-key="campaigns" onclick="window.location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
+      <div class="nav-item" data-key="documents" onclick="window.location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Kunden</h1>
+      <button class="btn btn-primary" onclick="openModal('modalCustomer')">&#43; Neuer Kunde</button>
+    </div>
+    <div class="page-body">
+      <div class="card">
+        <div class="card-header">
+          <input type="text" id="searchInput" class="form-control" placeholder="Suche nach Name, Firma..." style="max-width:300px" oninput="filterTable(this.value)">
+          <span class="text-muted text-sm" id="customerCount"></span>
+        </div>
+        <div class="table-wrapper" id="customersTableWrap">
+          <div class="loading-overlay">Laden...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Create/Edit Customer Modal -->
+<div class="modal-overlay" id="modalCustomer">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="customerModalTitle">Neuer Kunde</span>
+      <button class="modal-close" onclick="closeModal('modalCustomer')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="customerId">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('tabInfo')">Kundendaten</div>
+        <div class="tab" onclick="switchTab('tabLogin')">Login-Zugang</div>
+      </div>
+      <div id="tabInfo" class="tab-content active">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Firmenname <span class="required">*</span></label>
+            <input type="text" id="fCompany" class="form-control" placeholder="Musterfirma GmbH">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ansprechpartner <span class="required">*</span></label>
+            <input type="text" id="fContact" class="form-control" placeholder="Max Mustermann">
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-Mail <span class="required">*</span></label>
+            <input type="email" id="fEmail" class="form-control" placeholder="max@firma.de">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telefon</label>
+            <input type="tel" id="fPhone" class="form-control" placeholder="+49 123 456789">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Branche</label>
+            <select id="fIndustry" class="form-control">
+              <option value="">-- Auswählen --</option>
+              <option value="Immobilien">Immobilien</option>
+              <option value="Handwerk">Handwerk</option>
+              <option value="Versicherung">Versicherung</option>
+              <option value="Finanzberatung">Finanzberatung</option>
+              <option value="Solar">Solar / Energie</option>
+              <option value="Sonstiges">Sonstiges</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Adresse</label>
+            <input type="text" id="fAddress" class="form-control" placeholder="Musterstr. 1, 12345 Stadt">
+          </div>
+          <div class="form-group col-span-2">
+            <label class="form-label">Notizen</label>
+            <textarea id="fNotes" class="form-control" rows="3" placeholder="Interne Notizen..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div id="tabLogin" class="tab-content">
+        <div class="alert alert-info">&#128274; Zugangsdaten für das Kundenportal. Leer lassen, um keinen Login zu erstellen.</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Login E-Mail</label>
+            <input type="email" id="fLoginEmail" class="form-control" placeholder="login@firma.de">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Passwort</label>
+            <input type="password" id="fLoginPw" class="form-control" placeholder="Mindestens 6 Zeichen">
+          </div>
+        </div>
+      </div>
+      <div id="formError" class="form-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalCustomer')">Abbrechen</button>
+      <button class="btn btn-primary" id="btnSaveCustomer" onclick="saveCustomer()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="modalResetPw">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Passwort zurücksetzen</span>
+      <button class="modal-close" onclick="closeModal('modalResetPw')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="resetPwCustomerId">
+      <div class="form-group">
+        <label class="form-label">Neues Passwort</label>
+        <input type="password" id="newPw" class="form-control" placeholder="Mindestens 6 Zeichen">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalResetPw')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="resetPassword()">Zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
+<style>.toast-success{background:#16a34a}.toast-error{background:#dc2626}</style>
+
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  initNav('customers');
+
+  let allCustomers = [];
+
+  function switchTab(id) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['tabInfo','tabLogin'][i] === id));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === id));
+  }
+
+  async function loadCustomers() {
+    try {
+      allCustomers = await API.get('/api/admin/customers');
+      renderTable(allCustomers);
+    } catch (e) { showToast(e.message, 'error'); }
+  }
+
+  function renderTable(data) {
+    document.getElementById('customerCount').textContent = data.length + ' Kunden';
+    if (!data.length) {
+      document.getElementById('customersTableWrap').innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#128100;</div><h3>Noch keine Kunden</h3><p>Erstellen Sie Ihren ersten Kunden.</p></div>`;
+      return;
+    }
+    const rows = data.map(c => `
+      <tr>
+        <td><strong>${c.company_name}</strong><br><span class="text-sm text-muted">${c.contact_name}</span></td>
+        <td>${c.email}<br><span class="text-sm text-muted">${c.phone || '—'}</span></td>
+        <td>${c.industry || '—'}</td>
+        <td>${statusBadge(c.login_email ? 'active' : 'paused')}<br><span class="text-sm text-muted">${c.login_email || 'Kein Login'}</span></td>
+        <td><span style="font-weight:600">${c.lead_count}</span> Leads</td>
+        <td class="text-muted text-sm">${formatDate(c.created_at)}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-sm btn-secondary" onclick="editCustomer(${c.id})">Bearbeiten</button>
+            <button class="btn btn-sm btn-outline" onclick="openResetPw(${c.id})">PW</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteCustomer(${c.id},'${c.company_name}')">&#215;</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    document.getElementById('customersTableWrap').innerHTML = `
+      <table>
+        <thead><tr><th>Firma / Kontakt</th><th>E-Mail / Telefon</th><th>Branche</th><th>Portal-Login</th><th>Leads</th><th>Erstellt</th><th>Aktionen</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function filterTable(q) {
+    const filtered = allCustomers.filter(c =>
+      c.company_name.toLowerCase().includes(q.toLowerCase()) ||
+      c.contact_name.toLowerCase().includes(q.toLowerCase()) ||
+      (c.email || '').toLowerCase().includes(q.toLowerCase())
+    );
+    renderTable(filtered);
+  }
+
+  function openNewCustomer() {
+    document.getElementById('customerModalTitle').textContent = 'Neuer Kunde';
+    document.getElementById('customerId').value = '';
+    ['fCompany','fContact','fEmail','fPhone','fIndustry','fAddress','fNotes','fLoginEmail','fLoginPw'].forEach(id => document.getElementById(id).value = '');
+    openModal('modalCustomer');
+  }
+
+  document.querySelector('[onclick="openModal(\'modalCustomer\')"]').onclick = openNewCustomer;
+
+  async function editCustomer(id) {
+    try {
+      const c = await API.get('/api/admin/customers/' + id);
+      document.getElementById('customerModalTitle').textContent = 'Kunde bearbeiten';
+      document.getElementById('customerId').value = c.id;
+      document.getElementById('fCompany').value = c.company_name;
+      document.getElementById('fContact').value = c.contact_name;
+      document.getElementById('fEmail').value = c.email;
+      document.getElementById('fPhone').value = c.phone || '';
+      document.getElementById('fIndustry').value = c.industry || '';
+      document.getElementById('fAddress').value = c.address || '';
+      document.getElementById('fNotes').value = c.notes || '';
+      document.getElementById('fLoginEmail').value = c.login_email || '';
+      document.getElementById('fLoginPw').value = '';
+      openModal('modalCustomer');
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function saveCustomer() {
+    const id = document.getElementById('customerId').value;
+    const body = {
+      company_name: document.getElementById('fCompany').value,
+      contact_name: document.getElementById('fContact').value,
+      email: document.getElementById('fEmail').value,
+      phone: document.getElementById('fPhone').value,
+      industry: document.getElementById('fIndustry').value,
+      address: document.getElementById('fAddress').value,
+      notes: document.getElementById('fNotes').value,
+      login_email: document.getElementById('fLoginEmail').value,
+      login_password: document.getElementById('fLoginPw').value,
+    };
+
+    try {
+      if (id) {
+        await API.put('/api/admin/customers/' + id, body);
+        // Create login if email & pw provided and no existing login
+        if (body.login_email && body.login_password) {
+          try { await API.post('/api/admin/customers/' + id + '/create-login', { login_email: body.login_email, login_password: body.login_password }); } catch {}
+        }
+      } else {
+        await API.post('/api/admin/customers', body);
+      }
+      closeModal('modalCustomer');
+      showToast(id ? 'Kunde aktualisiert' : 'Kunde erstellt');
+      loadCustomers();
+    } catch(e) { document.getElementById('formError').textContent = e.message; }
+  }
+
+  function openResetPw(id) {
+    document.getElementById('resetPwCustomerId').value = id;
+    document.getElementById('newPw').value = '';
+    openModal('modalResetPw');
+  }
+
+  async function resetPassword() {
+    const id = document.getElementById('resetPwCustomerId').value;
+    const pw = document.getElementById('newPw').value;
+    try {
+      await API.put('/api/admin/customers/' + id + '/reset-password', { new_password: pw });
+      closeModal('modalResetPw');
+      showToast('Passwort zurückgesetzt');
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function deleteCustomer(id, name) {
+    if (!confirm(`Kunde "${name}" wirklich löschen? Alle zugehörigen Daten werden gelöscht.`)) return;
+    try {
+      await API.del('/api/admin/customers/' + id);
+      showToast('Kunde gelöscht');
+      loadCustomers();
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  loadCustomers();
+</script>
+</body>
+</html>

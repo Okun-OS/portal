@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mein Portal – Einstellungen</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Mein Portal<span class="sidebar-badge client">Kunde</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" data-key="dashboard" onclick="window.location.href='/client/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Meine Daten</span></div>
+      <div class="nav-item" data-key="leads" onclick="window.location.href='/client/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-item" data-key="campaigns" onclick="window.location.href='/client/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
+      <div class="nav-item" data-key="documents" onclick="window.location.href='/client/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+      <div class="nav-section"><span class="nav-section-label">Konto</span></div>
+      <div class="nav-item active" data-key="settings" onclick="window.location.href='/client/settings.html'"><span class="nav-icon">&#9881;</span> Einstellungen</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">K</div><div><div class="user-name" id="sidebarUserName">Kunde</div><div class="user-role">Kundenportal</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Einstellungen</h1>
+    </div>
+    <div class="page-body" style="max-width:640px">
+
+      <!-- Contact Data -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">Kontaktdaten</span>
+        </div>
+        <div class="card-body">
+          <div id="settingsForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Firma</label>
+                <input type="text" id="sCompany" class="form-control" disabled>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ansprechpartner</label>
+                <input type="text" id="sContact" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">E-Mail</label>
+                <input type="email" id="sEmail" class="form-control" disabled>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Telefon</label>
+                <input type="tel" id="sPhone" class="form-control">
+              </div>
+              <div class="form-group col-span-2">
+                <label class="form-label">Adresse</label>
+                <input type="text" id="sAddress" class="form-control">
+              </div>
+            </div>
+            <div class="form-hint mb-4">Firma und E-Mail werden vom Administrator verwaltet.</div>
+            <button class="btn btn-primary" onclick="saveSettings()">&#10003; Speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Login Info -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">Login-Informationen</span>
+        </div>
+        <div class="card-body">
+          <div class="detail-item mb-4"><label>Login E-Mail</label><span id="loginEmailDisplay">—</span></div>
+          <div class="form-group">
+            <label class="form-label">Branche</label>
+            <input type="text" id="sIndustry" class="form-control" disabled>
+          </div>
+        </div>
+      </div>
+
+      <!-- Change Password -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Passwort ändern</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">Aktuelles Passwort</label>
+            <input type="password" id="pwCurrent" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Neues Passwort</label>
+            <input type="password" id="pwNew" class="form-control" placeholder="Mindestens 6 Zeichen">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Passwort bestätigen</label>
+            <input type="password" id="pwConfirm" class="form-control">
+          </div>
+          <button class="btn btn-primary" onclick="changePassword()">Passwort ändern</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
+<style>.toast-success{background:#16a34a}.toast-error{background:#dc2626}</style>
+
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('client');
+  initNav('settings');
+
+  async function loadSettings() {
+    try {
+      const s = await API.get('/api/client/settings');
+      document.getElementById('sCompany').value = s.company_name || '';
+      document.getElementById('sContact').value = s.contact_name || '';
+      document.getElementById('sEmail').value = s.email || '';
+      document.getElementById('sPhone').value = s.phone || '';
+      document.getElementById('sAddress').value = s.address || '';
+      document.getElementById('sIndustry').value = s.industry || '';
+      document.getElementById('loginEmailDisplay').textContent = s.login_email || '—';
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function saveSettings() {
+    const body = {
+      contact_name: document.getElementById('sContact').value,
+      phone: document.getElementById('sPhone').value,
+      address: document.getElementById('sAddress').value,
+    };
+    try {
+      await API.put('/api/client/settings', body);
+      showToast('Einstellungen gespeichert');
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function changePassword() {
+    const current = document.getElementById('pwCurrent').value;
+    const newPw = document.getElementById('pwNew').value;
+    const confirm = document.getElementById('pwConfirm').value;
+
+    if (!current || !newPw || !confirm) { showToast('Alle Felder ausfüllen','error'); return; }
+    if (newPw !== confirm) { showToast('Passwörter stimmen nicht überein','error'); return; }
+    if (newPw.length < 6) { showToast('Passwort muss mindestens 6 Zeichen haben','error'); return; }
+
+    try {
+      await API.post('/api/auth/change-password', { currentPassword: current, newPassword: newPw });
+      showToast('Passwort erfolgreich geändert');
+      ['pwCurrent','pwNew','pwConfirm'].forEach(id => document.getElementById(id).value = '');
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  loadSettings();
+</script>
+</body>
+</html>

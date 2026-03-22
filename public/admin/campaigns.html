@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – Kampagnen</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" data-key="dashboard" onclick="window.location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Verwaltung</span></div>
+      <div class="nav-item" data-key="customers" onclick="window.location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" data-key="leads" onclick="window.location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-item active" data-key="campaigns" onclick="window.location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
+      <div class="nav-item" data-key="documents" onclick="window.location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Kampagnen</h1>
+      <button class="btn btn-primary" onclick="openNewCampaign()">&#43; Neue Kampagne</button>
+    </div>
+    <div class="page-body">
+      <div class="card mb-4">
+        <div class="card-body" style="padding:14px 20px">
+          <div class="search-bar">
+            <select id="filterCustomer" class="form-control" style="width:200px">
+              <option value="">Alle Kunden</option>
+            </select>
+            <button class="btn btn-secondary" onclick="loadCampaigns()">Filtern</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="campaignsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">
+        <div class="loading-overlay">Laden...</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Campaign Modal -->
+<div class="modal-overlay" id="modalCampaign">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="campaignModalTitle">Neue Kampagne</span>
+      <button class="modal-close" onclick="closeModal('modalCampaign')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="campaignId">
+      <div class="form-group">
+        <label class="form-label">Kunde <span class="required">*</span></label>
+        <select id="cCustomer" class="form-control"><option value="">-- Kunde wählen --</option></select>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Kampagnenname <span class="required">*</span></label>
+          <input type="text" id="cName" class="form-control" placeholder="Facebook Lead Ads Q1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Plattform</label>
+          <select id="cPlatform" class="form-control">
+            <option value="">-- Auswählen --</option>
+            <option value="Facebook">Facebook / Instagram</option>
+            <option value="Google">Google Ads</option>
+            <option value="TikTok">TikTok</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Sonstiges">Sonstiges</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monatliches Budget (€)</label>
+          <input type="number" id="cBudget" class="form-control" placeholder="1000" min="0" step="10">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="cStatus" class="form-control">
+            <option value="active">Aktiv</option>
+            <option value="paused">Pausiert</option>
+            <option value="ended">Beendet</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Startdatum</label>
+          <input type="date" id="cStart" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Enddatum</label>
+          <input type="date" id="cEnd" class="form-control">
+        </div>
+        <div class="form-group col-span-2">
+          <label class="form-label">Beschreibung</label>
+          <textarea id="cDesc" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalCampaign')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveCampaign()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
+<style>.toast-success{background:#16a34a}.toast-error{background:#dc2626}</style>
+
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  initNav('campaigns');
+
+  let customers = [];
+
+  async function init() {
+    customers = await API.get('/api/admin/customers');
+    customers.forEach(c => {
+      ['cCustomer','filterCustomer'].forEach(id => {
+        const opt = document.createElement('option');
+        opt.value = c.id; opt.textContent = c.company_name;
+        document.getElementById(id).appendChild(opt);
+      });
+    });
+    loadCampaigns();
+  }
+
+  async function loadCampaigns() {
+    const cid = document.getElementById('filterCustomer').value;
+    let url = '/api/admin/campaigns';
+    if (cid) url += '?customer_id=' + cid;
+    try {
+      const campaigns = await API.get(url);
+      renderCampaigns(campaigns);
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  function renderCampaigns(campaigns) {
+    if (!campaigns.length) {
+      document.getElementById('campaignsGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">&#128202;</div><h3>Keine Kampagnen</h3><p>Erstellen Sie Ihre erste Kampagne.</p></div>`;
+      return;
+    }
+
+    document.getElementById('campaignsGrid').innerHTML = campaigns.map(c => {
+      const cpl = c.lead_count > 0 ? (c.budget_monthly / c.lead_count).toFixed(2) : null;
+      return `
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">${c.name}</div>
+              <div class="text-sm text-muted">${c.company_name}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              ${statusBadge(c.status)}
+              <button class="btn btn-sm btn-secondary" onclick="editCampaign(${c.id})">&#9998;</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteCampaign(${c.id},'${c.name}')">&#215;</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div><div class="stat-label">Leads gesamt</div><div style="font-size:22px;font-weight:700">${c.lead_count}</div></div>
+              <div><div class="stat-label">Abgeschlossen</div><div style="font-size:22px;font-weight:700;color:var(--success)">${c.closed_leads}</div></div>
+              <div><div class="stat-label">Monatsbudget</div><div style="font-size:16px;font-weight:600">${formatCurrency(c.budget_monthly)}</div></div>
+              <div><div class="stat-label">Kosten / Lead</div><div style="font-size:16px;font-weight:600">${cpl ? formatCurrency(cpl) : '—'}</div></div>
+            </div>
+            ${c.platform ? `<div class="text-sm text-muted">Plattform: ${c.platform}</div>` : ''}
+            ${c.start_date ? `<div class="text-sm text-muted">Start: ${formatDate(c.start_date)}</div>` : ''}
+            ${c.description ? `<div class="text-sm" style="margin-top:8px;color:var(--gray-600)">${c.description}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openNewCampaign() {
+    document.getElementById('campaignModalTitle').textContent = 'Neue Kampagne';
+    document.getElementById('campaignId').value = '';
+    ['cName','cDesc','cStart','cEnd'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cCustomer').value = '';
+    document.getElementById('cPlatform').value = '';
+    document.getElementById('cStatus').value = 'active';
+    document.getElementById('cBudget').value = '';
+    openModal('modalCampaign');
+  }
+
+  async function editCampaign(id) {
+    try {
+      const c = await API.get('/api/admin/campaigns/' + id);
+      document.getElementById('campaignModalTitle').textContent = 'Kampagne bearbeiten';
+      document.getElementById('campaignId').value = c.id;
+      document.getElementById('cCustomer').value = c.customer_id;
+      document.getElementById('cName').value = c.name;
+      document.getElementById('cPlatform').value = c.platform || '';
+      document.getElementById('cBudget').value = c.budget_monthly;
+      document.getElementById('cStatus').value = c.status;
+      document.getElementById('cStart').value = c.start_date || '';
+      document.getElementById('cEnd').value = c.end_date || '';
+      document.getElementById('cDesc').value = c.description || '';
+      openModal('modalCampaign');
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function saveCampaign() {
+    const id = document.getElementById('campaignId').value;
+    const body = {
+      customer_id: document.getElementById('cCustomer').value,
+      name: document.getElementById('cName').value,
+      platform: document.getElementById('cPlatform').value,
+      budget_monthly: parseFloat(document.getElementById('cBudget').value) || 0,
+      status: document.getElementById('cStatus').value,
+      start_date: document.getElementById('cStart').value || null,
+      end_date: document.getElementById('cEnd').value || null,
+      description: document.getElementById('cDesc').value,
+    };
+    try {
+      if (id) await API.put('/api/admin/campaigns/' + id, body);
+      else await API.post('/api/admin/campaigns', body);
+      closeModal('modalCampaign');
+      showToast(id ? 'Kampagne aktualisiert' : 'Kampagne erstellt');
+      loadCampaigns();
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function deleteCampaign(id, name) {
+    if (!confirm(`Kampagne "${name}" löschen?`)) return;
+    try {
+      await API.del('/api/admin/campaigns/' + id);
+      showToast('Kampagne gelöscht');
+      loadCampaigns();
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  init();
+</script>
+</body>
+</html>
