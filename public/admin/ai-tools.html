@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – KI-Tools</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .tool-tabs { display: flex; border-bottom: 2px solid var(--gray-200); margin-bottom: 20px; gap: 0; }
+    .tool-tab { padding: 12px 20px; cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--gray-500); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+    .tool-tab:hover { color: var(--gray-800); }
+    .tool-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tool-section { display: none; }
+    .tool-section.active { display: block; }
+    .creative-item { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+    .creative-item .ci-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .creative-item .ci-content { font-size: 13px; color: var(--gray-700); white-space: pre-wrap; line-height: 1.6; }
+    .history-item { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; }
+    .history-item:hover { background: var(--gray-50); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" data-key="dashboard" onclick="location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Kunden & Leads</span></div>
+      <div class="nav-item" data-key="customers" onclick="location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" data-key="leads" onclick="location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-section"><span class="nav-section-label">Kampagnen</span></div>
+      <div class="nav-item" data-key="campaigns" onclick="location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
+      <div class="nav-item" data-key="analytics" onclick="location.href='/admin/analytics.html'"><span class="nav-icon">&#128200;</span> Analytics</div>
+      <div class="nav-section"><span class="nav-section-label">KI-Tools</span></div>
+      <div class="nav-item active" data-key="ai" onclick="location.href='/admin/ai-tools.html'"><span class="nav-icon">&#129504;</span> Analyse & Studio</div>
+      <div class="nav-item" data-key="tasks" onclick="location.href='/admin/tasks.html'"><span class="nav-icon">&#9989;</span> Optimierungs-Tasks</div>
+      <div class="nav-section"><span class="nav-section-label">Dokumente</span></div>
+      <div class="nav-item" data-key="documents" onclick="location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">&#129504; KI-Analyse & Studio</h1>
+      <span class="text-muted text-sm">Intern – nicht für Kunden sichtbar</span>
+    </div>
+    <div class="page-body">
+
+      <!-- Context selector -->
+      <div class="card mb-4">
+        <div class="card-body" style="padding:14px 20px">
+          <div class="search-bar">
+            <label style="font-size:13px;font-weight:500;white-space:nowrap">Kontext:</label>
+            <select id="aiCustomer" class="form-control" style="width:220px" onchange="loadCampaignsForAI()">
+              <option value="">-- Kunden wählen --</option>
+            </select>
+            <select id="aiCampaign" class="form-control" style="width:220px">
+              <option value="">-- Kampagne (optional) --</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tool Tabs -->
+      <div class="tool-tabs">
+        <div class="tool-tab active" onclick="switchTool('strategy')">&#128269; Strategie-Analyse</div>
+        <div class="tool-tab" onclick="switchTool('adcopy')">&#9997; Anzeigen-Studio</div>
+        <div class="tool-tab" onclick="switchTool('funnel')">&#127915; Funnel-Konzept</div>
+        <div class="tool-tab" onclick="switchTool('optimize')">&#128200; KI-Optimierung</div>
+        <div class="tool-tab" onclick="switchTool('creatives')">&#128218; Creatives</div>
+        <div class="tool-tab" onclick="switchTool('history')">&#128337; Verlauf</div>
+      </div>
+
+      <!-- === STRATEGY === -->
+      <div id="tool-strategy" class="tool-section active">
+        <div class="ai-workspace">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Analyse-Input</span></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Angebot / Dienstleistung</label>
+                <textarea id="sOffer" class="form-control" rows="3" placeholder="Was verkauft der Kunde? Z.B. Immobilienbewertung, Solaranlage Montage..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Website-URL</label>
+                <input type="text" id="sWebsite" class="form-control" placeholder="https://...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Zielregion</label>
+                <input type="text" id="sRegion" class="form-control" placeholder="Berlin, Bayern, DACH...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Bisherige Erfahrungen / Kontext</label>
+                <textarea id="sNotes" class="form-control" rows="3" placeholder="Was hat bisher gut/schlecht funktioniert?"></textarea>
+              </div>
+              <button class="btn btn-primary w-full" id="btnStrategy" onclick="runStrategy()">&#129504; Analyse starten</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">KI-Analyse</span>
+              <button class="btn btn-sm btn-secondary" id="btnSaveCreativeS" style="display:none" onclick="copyResult('strategyResult')">&#128203; Kopieren</button>
+            </div>
+            <div class="card-body" id="strategyResult">
+              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#129504;</div><p>Fülle das Formular aus und starte die Analyse.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === AD COPY === -->
+      <div id="tool-adcopy" class="tool-section">
+        <div class="ai-workspace">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Anzeigen-Parameter</span></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Branche / Angebot</label>
+                <input type="text" id="adIndustry" class="form-control" placeholder="Immobilienmakler Berlin">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Zielgruppe</label>
+                <input type="text" id="adTarget" class="form-control" placeholder="Hausbesitzer 45+, verkaufsbereit">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Plattform</label>
+                <select id="adPlatform" class="form-control">
+                  <option value="Facebook/Instagram">Facebook / Instagram</option>
+                  <option value="Google">Google Ads</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ton</label>
+                <select id="adTone" class="form-control">
+                  <option value="professionell, vertrauenswürdig">Professionell & Vertrauenswürdig</option>
+                  <option value="direkt, provokant">Direkt & Provokant</option>
+                  <option value="empathisch, verständnisvoll">Empathisch</option>
+                  <option value="energetisch, motivierend">Energetisch</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Zusatzinfos / USP</label>
+                <textarea id="adOffer" class="form-control" rows="3" placeholder="Was macht das Angebot einzigartig?"></textarea>
+              </div>
+              <button class="btn btn-primary w-full" id="btnAdCopy" onclick="runAdCopy()">&#9997; Texte generieren</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Generierte Anzeigentexte</span>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-sm btn-secondary" id="btnCopyAd" style="display:none" onclick="copyResult('adCopyResult')">&#128203; Kopieren</button>
+                <button class="btn btn-sm btn-success" id="btnSaveAd" style="display:none" onclick="saveCreatives()">&#128190; Speichern</button>
+              </div>
+            </div>
+            <div class="card-body" id="adCopyResult">
+              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#9997;</div><p>Fülle die Parameter aus und generiere Anzeigentexte.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === FUNNEL === -->
+      <div id="tool-funnel" class="tool-section">
+        <div class="ai-workspace">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Funnel-Parameter</span></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Branche</label>
+                <input type="text" id="fIndustry2" class="form-control" placeholder="Immobilien, Handwerk, Solar...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Angebot (was bekommt der Lead?)</label>
+                <textarea id="fOffer" class="form-control" rows="3" placeholder="Kostenlose Immobilienbewertung, Kostenloses Erstgespräch..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Zielgruppe</label>
+                <input type="text" id="fTarget" class="form-control" placeholder="Wer soll die Page sehen?">
+              </div>
+              <button class="btn btn-primary w-full" id="btnFunnel" onclick="runFunnel()">&#127915; Konzept generieren</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Landingpage-Konzept</span>
+              <button class="btn btn-sm btn-secondary" id="btnCopyFunnel" style="display:none" onclick="copyResult('funnelResult')">&#128203; Kopieren</button>
+            </div>
+            <div class="card-body" id="funnelResult">
+              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#127915;</div><p>Generiere ein Landingpage-Konzept für deinen Kunden.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === OPTIMIZE === -->
+      <div id="tool-optimize" class="tool-section">
+        <div class="ai-workspace">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Kampagnen-Metriken</span></div>
+            <div class="card-body">
+              <div class="alert alert-info">&#128202; Trage aktuelle Metriken ein – die KI generiert daraus konkrete Optimierungs-Tasks.</div>
+              <div class="form-group">
+                <label class="form-label">Kampagnenname</label>
+                <input type="text" id="optCampName" class="form-control" placeholder="z.B. FB Lead Ads Winter">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Plattform</label>
+                <select id="optPlatform" class="form-control">
+                  <option>Facebook/Instagram</option><option>Google</option><option>TikTok</option>
+                </select>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Impressionen</label>
+                  <input type="number" id="optImpressions" class="form-control" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Klicks</label>
+                  <input type="number" id="optClicks" class="form-control" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Leads</label>
+                  <input type="number" id="optLeads" class="form-control" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Ausgaben (€)</label>
+                  <input type="number" id="optSpend" class="form-control" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Budget/Monat (€)</label>
+                  <input type="number" id="optBudget" class="form-control" placeholder="0">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Zusätzlicher Kontext</label>
+                <textarea id="optNotes" class="form-control" rows="2" placeholder="Was fällt auf? Welche Probleme gibt es?"></textarea>
+              </div>
+              <button class="btn btn-primary w-full" id="btnOptimize" onclick="runOptimize()">&#128200; Tasks generieren</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">KI-Optimierungsvorschläge</span>
+            </div>
+            <div class="card-body" id="optimizeResult">
+              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#128200;</div><p>Die KI analysiert deine Metriken und erstellt konkrete Tasks.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === CREATIVES === -->
+      <div id="tool-creatives" class="tool-section">
+        <div class="card mb-4">
+          <div class="card-header">
+            <span class="card-title">Gespeicherte Creatives</span>
+            <button class="btn btn-sm btn-primary" onclick="openModal('modalNewCreative')">&#43; Manuell hinzufügen</button>
+          </div>
+          <div id="creativesContent"><div class="loading-overlay">Laden...</div></div>
+        </div>
+      </div>
+
+      <!-- === HISTORY === -->
+      <div id="tool-history" class="tool-section">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">KI-Analyse Verlauf</span>
+            <select id="historyFilter" class="form-control" style="width:180px" onchange="loadHistory()">
+              <option value="">Alle Typen</option>
+              <option value="strategy">Strategie</option>
+              <option value="ad_copy">Anzeigentexte</option>
+              <option value="funnel">Funnel</option>
+              <option value="optimization">Optimierung</option>
+            </select>
+          </div>
+          <div id="historyContent" class="card-body"><div class="loading-overlay">Laden...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- New Creative Modal -->
+<div class="modal-overlay" id="modalNewCreative">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Creative hinzufügen</span>
+      <button class="modal-close" onclick="closeModal('modalNewCreative')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Typ</label>
+        <select id="crType" class="form-control">
+          <option value="hook">Hook (erster Satz)</option>
+          <option value="headline">Headline</option>
+          <option value="body">Anzeigentext (Body)</option>
+          <option value="cta">Call-to-Action</option>
+          <option value="landing_page">Landingpage-Konzept</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Titel / Kurzbeschreibung</label>
+        <input type="text" id="crTitle" class="form-control" placeholder="z.B. Hook Variante A – Immobilien">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Inhalt</label>
+        <textarea id="crContent" class="form-control" rows="6"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select id="crStatus" class="form-control">
+          <option value="draft">Entwurf</option>
+          <option value="active">Aktiv</option>
+          <option value="archived">Archiviert</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalNewCreative')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveManualCreative()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- History Detail Modal -->
+<div class="modal-overlay" id="modalHistoryDetail">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title" id="histDetailTitle">Analyse</span>
+      <button class="modal-close" onclick="closeModal('modalHistoryDetail')">&times;</button>
+    </div>
+    <div class="modal-body" id="histDetailBody"></div>
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
+
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  initNav('ai');
+
+  let currentAdResult = '';
+
+  const typeLabels = { strategy: '&#128269; Strategie', ad_copy: '&#9997; Anzeigentext', funnel: '&#127915; Funnel', optimization: '&#128200; Optimierung', explain: '&#128172; Erklärung' };
+
+  async function init() {
+    const customers = await API.get('/api/admin/customers');
+    ['aiCustomer'].forEach(id => {
+      customers.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = c.company_name + ' – ' + c.contact_name;
+        document.getElementById(id).appendChild(o);
+      });
+    });
+  }
+
+  async function loadCampaignsForAI() {
+    const cid = document.getElementById('aiCustomer').value;
+    const sel = document.getElementById('aiCampaign');
+    sel.innerHTML = '<option value="">-- Kampagne (optional) --</option>';
+    if (!cid) return;
+    const camps = await API.get('/api/admin/campaigns?customer_id=' + cid);
+    camps.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name;
+      sel.appendChild(o);
+    });
+  }
+
+  function switchTool(name) {
+    document.querySelectorAll('.tool-tab').forEach((t, i) => {
+      const names = ['strategy','adcopy','funnel','optimize','creatives','history'];
+      t.classList.toggle('active', names[i] === name);
+    });
+    document.querySelectorAll('.tool-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('tool-' + name).classList.add('active');
+    if (name === 'creatives') loadCreatives();
+    if (name === 'history') loadHistory();
+  }
+
+  function getCustomerContext() {
+    const cid = document.getElementById('aiCustomer').value;
+    const customers = window._customers || [];
+    return cid;
+  }
+
+  function setGenerating(resultId, btnId) {
+    document.getElementById(resultId).innerHTML = `
+      <div class="ai-generating">
+        <div class="ai-dot-pulse"><span></span><span></span><span></span></div>
+        KI analysiert gerade...
+      </div>
+    `;
+    if (btnId) document.getElementById(btnId).disabled = true;
+  }
+
+  function renderMarkdown(text) {
+    // Simple markdown render
+    return text
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+  }
+
+  async function runStrategy() {
+    const cid = document.getElementById('aiCustomer').value;
+    setGenerating('strategyResult', 'btnStrategy');
+    document.getElementById('btnSaveCreativeS').style.display = 'none';
+    try {
+      const context = {
+        company: cid ? '' : 'Unbekannt',
+        industry: '',
+        offer: document.getElementById('sOffer').value,
+        website: document.getElementById('sWebsite').value,
+        region: document.getElementById('sRegion').value,
+        notes: document.getElementById('sNotes').value,
+      };
+      const res = await API.post('/api/admin/ai/strategy', { customer_id: cid || null, context });
+      document.getElementById('strategyResult').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.result)}</div>`;
+      document.getElementById('btnSaveCreativeS').style.display = '';
+    } catch(e) {
+      document.getElementById('strategyResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    } finally { document.getElementById('btnStrategy').disabled = false; }
+  }
+
+  async function runAdCopy() {
+    const cid = document.getElementById('aiCustomer').value;
+    setGenerating('adCopyResult', 'btnAdCopy');
+    document.getElementById('btnCopyAd').style.display = 'none';
+    document.getElementById('btnSaveAd').style.display = 'none';
+    try {
+      const context = {
+        industry: document.getElementById('adIndustry').value,
+        offer: document.getElementById('adOffer').value,
+        targetAudience: document.getElementById('adTarget').value,
+        platform: document.getElementById('adPlatform').value,
+        tone: document.getElementById('adTone').value,
+      };
+      const res = await API.post('/api/admin/ai/ad-copy', {
+        customer_id: cid || null,
+        campaign_id: document.getElementById('aiCampaign').value || null,
+        context
+      });
+      currentAdResult = res.result;
+      document.getElementById('adCopyResult').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.result)}</div>`;
+      document.getElementById('btnCopyAd').style.display = '';
+      document.getElementById('btnSaveAd').style.display = '';
+    } catch(e) {
+      document.getElementById('adCopyResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    } finally { document.getElementById('btnAdCopy').disabled = false; }
+  }
+
+  async function runFunnel() {
+    const cid = document.getElementById('aiCustomer').value;
+    setGenerating('funnelResult', 'btnFunnel');
+    document.getElementById('btnCopyFunnel').style.display = 'none';
+    try {
+      const context = {
+        industry: document.getElementById('fIndustry2').value,
+        offer: document.getElementById('fOffer').value,
+        targetAudience: document.getElementById('fTarget').value,
+      };
+      const res = await API.post('/api/admin/ai/funnel', {
+        customer_id: cid || null,
+        campaign_id: document.getElementById('aiCampaign').value || null,
+        context
+      });
+      document.getElementById('funnelResult').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.result)}</div>`;
+      document.getElementById('btnCopyFunnel').style.display = '';
+    } catch(e) {
+      document.getElementById('funnelResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    } finally { document.getElementById('btnFunnel').disabled = false; }
+  }
+
+  async function runOptimize() {
+    const cid = document.getElementById('aiCustomer').value;
+    const clicks = parseInt(document.getElementById('optClicks').value) || 0;
+    const impressions = parseInt(document.getElementById('optImpressions').value) || 0;
+    const leads = parseInt(document.getElementById('optLeads').value) || 0;
+    const spend = parseFloat(document.getElementById('optSpend').value) || 0;
+    setGenerating('optimizeResult', 'btnOptimize');
+    try {
+      const context = {
+        campaignName: document.getElementById('optCampName').value,
+        platform: document.getElementById('optPlatform').value,
+        impressions,
+        clicks,
+        leads,
+        spend,
+        budget: document.getElementById('optBudget').value,
+        notes: document.getElementById('optNotes').value,
+        ctr: impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : 0,
+        cpc: clicks > 0 ? (spend / clicks).toFixed(2) : 0,
+        cpl: leads > 0 ? (spend / leads).toFixed(2) : 0,
+      };
+      const res = await API.post('/api/admin/ai/optimize', {
+        customer_id: cid || null,
+        campaign_id: document.getElementById('aiCampaign').value || null,
+        context
+      });
+      const data = res.result;
+      let html = '';
+      if (data.summary) {
+        html += `<div class="alert alert-info" style="margin-bottom:16px">${data.summary}</div>`;
+      }
+      if (data.tasks && data.tasks.length) {
+        html += '<div style="display:flex;flex-direction:column;gap:8px">' +
+          data.tasks.map(t => `
+            <div class="task-card">
+              <div class="task-title">
+                <span class="priority-dot priority-${t.priority}" style="display:inline-block;margin-right:6px;vertical-align:middle"></span>
+                ${t.title}
+                <span class="badge badge-ai" style="margin-left:6px;font-size:10px">${t.category || 'KI'}</span>
+              </div>
+              ${t.description ? `<div class="task-desc">${t.description}</div>` : ''}
+            </div>
+          `).join('') + '</div>';
+        html += `<div style="margin-top:12px"><button class="btn btn-success" onclick="showToast('${data.tasks.length} Tasks wurden automatisch gespeichert!')">&#9989; Tasks wurden gespeichert</button></div>`;
+      } else {
+        html = '<p class="text-muted">Keine Tasks generiert.</p>';
+      }
+      document.getElementById('optimizeResult').innerHTML = html;
+    } catch(e) {
+      document.getElementById('optimizeResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    } finally { document.getElementById('btnOptimize').disabled = false; }
+  }
+
+  async function saveCreatives() {
+    const cid = document.getElementById('aiCustomer').value;
+    if (!cid || !currentAdResult) return;
+    try {
+      await API.post('/api/admin/ai/creatives', {
+        customer_id: cid,
+        campaign_id: document.getElementById('aiCampaign').value || null,
+        type: 'body',
+        title: 'KI-Anzeigentext – ' + new Date().toLocaleDateString('de-DE'),
+        content: currentAdResult,
+        source: 'ai',
+        status: 'draft'
+      });
+      showToast('Creative gespeichert');
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function saveManualCreative() {
+    const cid = document.getElementById('aiCustomer').value;
+    if (!cid) { showToast('Bitte zuerst Kunden auswählen', 'error'); return; }
+    try {
+      await API.post('/api/admin/ai/creatives', {
+        customer_id: cid,
+        campaign_id: document.getElementById('aiCampaign').value || null,
+        type: document.getElementById('crType').value,
+        title: document.getElementById('crTitle').value,
+        content: document.getElementById('crContent').value,
+        status: document.getElementById('crStatus').value,
+        source: 'manual',
+      });
+      closeModal('modalNewCreative');
+      showToast('Creative gespeichert');
+      loadCreatives();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function loadCreatives() {
+    const cid = document.getElementById('aiCustomer').value;
+    let url = '/api/admin/ai/creatives';
+    if (cid) url += '?customer_id=' + cid;
+    try {
+      const rows = await API.get(url);
+      if (!rows.length) {
+        document.getElementById('creativesContent').innerHTML = `<div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#128218;</div><h3>Noch keine Creatives</h3><p>Generiere Anzeigentexte oder füge manuell hinzu.</p></div>`;
+        return;
+      }
+      const typeMap = { hook: 'Hook', headline: 'Headline', body: 'Anzeigentext', cta: 'CTA', landing_page: 'Landingpage' };
+      document.getElementById('creativesContent').innerHTML = '<div style="padding:16px">' +
+        rows.map(c => `
+          <div class="creative-item">
+            <div class="ci-header">
+              <div>
+                <span class="badge badge-sent" style="font-size:11px">${typeMap[c.type] || c.type}</span>
+                ${c.source === 'ai' ? '<span class="badge badge-ai" style="font-size:10px;margin-left:4px">KI</span>' : ''}
+                <strong style="margin-left:8px;font-size:13px">${c.title}</strong>
+                <span class="text-sm text-muted" style="margin-left:8px">${c.company_name || ''}</span>
+              </div>
+              <div style="display:flex;gap:4px;align-items:center">
+                ${statusBadge(c.status)}
+                <select class="form-control" style="width:100px;padding:3px 6px;font-size:11px" onchange="updateCreativeStatus(${c.id},this.value)">
+                  <option value="draft" ${c.status==='draft'?'selected':''}>Entwurf</option>
+                  <option value="active" ${c.status==='active'?'selected':''}>Aktiv</option>
+                  <option value="archived" ${c.status==='archived'?'selected':''}>Archiv</option>
+                </select>
+                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCreative(${c.id})">&#215;</button>
+              </div>
+            </div>
+            <div class="ci-content">${c.content.slice(0, 300)}${c.content.length > 300 ? '...' : ''}</div>
+            <div class="text-sm text-muted" style="margin-top:6px">${formatDate(c.created_at)}</div>
+          </div>
+        `).join('') + '</div>';
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function updateCreativeStatus(id, status) {
+    try { await API.put('/api/admin/ai/creatives/' + id, { status }); showToast('Status aktualisiert'); } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function deleteCreative(id) {
+    if (!confirm('Creative löschen?')) return;
+    try { await API.del('/api/admin/ai/creatives/' + id); showToast('Gelöscht'); loadCreatives(); } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function loadHistory() {
+    const type = document.getElementById('historyFilter').value;
+    const cid = document.getElementById('aiCustomer').value;
+    let url = '/api/admin/ai/history';
+    const p = [];
+    if (cid) p.push('customer_id=' + cid);
+    if (type) p.push('type=' + type);
+    if (p.length) url += '?' + p.join('&');
+    try {
+      const rows = await API.get(url);
+      if (!rows.length) {
+        document.getElementById('historyContent').innerHTML = '<p class="text-muted">Noch keine Analysen gespeichert.</p>';
+        return;
+      }
+      document.getElementById('historyContent').innerHTML = rows.map(r => `
+        <div class="history-item" onclick="showHistoryDetail(${r.id})">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:12px;font-weight:600">${(typeLabels[r.type]||r.type)}</span>
+            <span class="text-sm text-muted">${formatDateTime(r.created_at)}</span>
+          </div>
+          <div style="font-size:13px;color:var(--gray-700)">${r.company_name ? r.company_name + (r.campaign_name ? ' / ' + r.campaign_name : '') : 'Kein Kunde'}</div>
+          <div class="text-sm text-muted" style="margin-top:4px">${(r.result_preview || '').replace(/<[^>]+>/g,'').slice(0,120)}...</div>
+        </div>
+      `).join('');
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function showHistoryDetail(id) {
+    openModal('modalHistoryDetail');
+    document.getElementById('histDetailBody').innerHTML = '<div class="loading-overlay">Laden...</div>';
+    try {
+      const row = await API.get('/api/admin/ai/history/' + id);
+      document.getElementById('histDetailTitle').textContent = (typeLabels[row.type] || row.type) + ' – ' + formatDate(row.created_at);
+      document.getElementById('histDetailBody').innerHTML = `<div class="ai-result-box">${renderMarkdown(row.result)}</div>`;
+    } catch(e) { showToast(e.message,'error'); }
+  }
+
+  function copyResult(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    navigator.clipboard.writeText(el.innerText || el.textContent).then(() => showToast('In Zwischenablage kopiert'));
+  }
+
+  init();
+</script>
+</body>
+</html>

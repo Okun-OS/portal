@@ -3,24 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mein Portal – Dashboard</title>
+  <title>Mein Portal – Übersicht</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .welcome-header { margin-bottom: 24px; }
+    .welcome-header h2 { font-size: 22px; font-weight: 700; color: var(--gray-900); }
+    .welcome-header p { color: var(--gray-500); margin-top: 4px; }
+
+    .lead-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--gray-100); }
+    .lead-row:last-child { border-bottom: none; }
+    .lead-avatar { width: 36px; height: 36px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--primary); flex-shrink: 0; }
+    .lead-row-name { font-weight: 500; font-size: 14px; }
+    .lead-row-sub { font-size: 12px; color: var(--gray-400); }
+  </style>
 </head>
 <body>
 <div class="app-layout">
+  <!-- Client Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Mein Portal<span class="sidebar-badge client">Kunde</span></div>
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
-      <div class="nav-item active" data-key="dashboard" onclick="window.location.href='/client/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
-      <div class="nav-section"><span class="nav-section-label">Meine Daten</span></div>
-      <div class="nav-item" data-key="leads" onclick="window.location.href='/client/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
-      <div class="nav-item" data-key="campaigns" onclick="window.location.href='/client/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
-      <div class="nav-item" data-key="documents" onclick="window.location.href='/client/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+      <div class="nav-item active" data-key="dashboard" onclick="location.href='/client/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Meine Anfragen</span></div>
+      <div class="nav-item" data-key="leads" onclick="location.href='/client/leads.html'"><span class="nav-icon">&#127919;</span> Meine Leads</div>
+      <div class="nav-item" data-key="campaigns" onclick="location.href='/client/campaigns.html'"><span class="nav-icon">&#128202;</span> Meine Kampagne</div>
+      <div class="nav-section"><span class="nav-section-label">Finanzen</span></div>
+      <div class="nav-item" data-key="documents" onclick="location.href='/client/documents.html'"><span class="nav-icon">&#128196;</span> Rechnungen &amp; Angebote</div>
       <div class="nav-section"><span class="nav-section-label">Konto</span></div>
-      <div class="nav-item" data-key="settings" onclick="window.location.href='/client/settings.html'"><span class="nav-icon">&#9881;</span> Einstellungen</div>
+      <div class="nav-item" data-key="settings" onclick="location.href='/client/settings.html'"><span class="nav-icon">&#9881;</span> Einstellungen</div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><div class="user-avatar" id="sidebarAvatar">K</div><div><div class="user-name" id="sidebarUserName">Kunde</div><div class="user-role">Kundenportal</div></div></div>
@@ -30,109 +43,200 @@
 
   <main class="main-content">
     <div class="page-header">
-      <h1 class="page-title">Willkommen zurück!</h1>
+      <div>
+        <div class="page-title" id="welcomeTitle">Willkommen!</div>
+      </div>
       <span class="text-muted text-sm" id="headerDate"></span>
     </div>
+
     <div class="page-body">
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-icon">&#128197;</div><div class="stat-label">Leads diesen Monat</div><div class="stat-value" id="sMonth">—</div></div>
-        <div class="stat-card"><div class="stat-icon">&#127381;</div><div class="stat-label">Neue Leads</div><div class="stat-value" id="sNew">—</div></div>
-        <div class="stat-card"><div class="stat-icon">&#128203;</div><div class="stat-label">Offene Leads</div><div class="stat-value" id="sOpen">—</div></div>
-        <div class="stat-card"><div class="stat-icon">&#127919;</div><div class="stat-label">Leads gesamt</div><div class="stat-value" id="sTotal">—</div></div>
+
+      <!-- Hero stat – neue Leads -->
+      <div class="result-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div class="r-title">Neue Anfragen diese Woche</div>
+            <div class="r-value" id="heroLeads">—</div>
+            <div class="r-sub" id="heroTrend"></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;opacity:0.7;margin-bottom:6px">Gesamt bisher</div>
+            <div style="font-size:28px;font-weight:700" id="heroTotal">—</div>
+          </div>
+        </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:8px">
+      <!-- Stats row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:24px">
+        <div class="stat-card">
+          <div class="stat-label">Offen / Noch nicht bearbeitet</div>
+          <div class="stat-value" id="statOpen">—</div>
+          <div class="stat-sub">Bitte bald kontaktieren</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Kontaktiert</div>
+          <div class="stat-value" id="statContacted">—</div>
+          <div class="stat-sub">In Bearbeitung</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Abgeschlossen</div>
+          <div class="stat-value" id="statClosed" style="color:var(--success)">—</div>
+          <div class="stat-sub">Erfolgreiche Anfragen</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
         <!-- Neueste Leads -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">Neueste Leads</span>
+            <span class="card-title">Neueste Anfragen</span>
             <a href="/client/leads.html" class="btn btn-sm btn-secondary">Alle anzeigen</a>
           </div>
-          <div id="recentLeads"><div class="loading-overlay">Laden...</div></div>
+          <div id="recentLeadsList">
+            <div class="loading-overlay">Laden...</div>
+          </div>
         </div>
 
-        <!-- Kampagne & Status -->
+        <!-- Right column -->
         <div>
-          <div class="card mb-4" id="campaignCard">
-            <div class="card-header"><span class="card-title">Aktive Kampagne</span></div>
-            <div class="card-body" id="campaignBody"><div class="loading-overlay">Laden...</div></div>
+          <!-- Campaign status card -->
+          <div id="campaignStatusCard" style="margin-bottom:16px">
+            <div class="loading-overlay">Laden...</div>
           </div>
 
+          <!-- AI Erklärung -->
           <div class="card">
-            <div class="card-header"><span class="card-title">Lead-Status Übersicht</span></div>
-            <div class="card-body" id="statusBreakdown"><div class="loading-overlay">Laden...</div></div>
+            <div class="card-header">
+              <span class="card-title">&#129504; Ergebnisse verstehen</span>
+            </div>
+            <div class="card-body">
+              <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">
+                Unsere KI erklärt Ihnen Ihre aktuellen Ergebnisse in einfacher Sprache.
+              </p>
+              <button class="btn btn-primary w-full" id="btnExplain" onclick="explainResults()">
+                Ergebnisse erklären lassen
+              </button>
+              <div id="explainResult"></div>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   </main>
 </div>
 
 <div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
-<style>.toast-success{background:#16a34a}.toast-error{background:#dc2626}</style>
 
 <script src="/js/api.js"></script>
 <script>
   const user = requireAuth('client');
   initNav('dashboard');
-  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   async function loadDashboard() {
     try {
       const data = await API.get('/api/client/dashboard');
+      const s = data.stats;
 
-      document.getElementById('sMonth').textContent = data.stats.leadsThisMonth;
-      document.getElementById('sNew').textContent = data.stats.newLeads;
-      document.getElementById('sOpen').textContent = data.stats.openLeads;
-      document.getElementById('sTotal').textContent = data.stats.totalLeads;
-
-      // Recent leads
-      const rows = (data.recentLeads || []).map(l => `
-        <tr onclick="window.location.href='/client/leads.html?id=${l.id}'" style="cursor:pointer">
-          <td><strong>${l.name}</strong></td>
-          <td>${l.phone || '—'}</td>
-          <td>${statusBadge(l.status)}</td>
-          <td class="text-sm text-muted">${formatDate(l.created_at)}</td>
-        </tr>
-      `).join('') || '<tr><td colspan="4" class="text-muted" style="text-align:center;padding:20px">Noch keine Leads</td></tr>';
-
-      document.getElementById('recentLeads').innerHTML = `
-        <table><thead><tr><th>Name</th><th>Telefon</th><th>Status</th><th>Datum</th></tr></thead><tbody>${rows}</tbody></table>
-      `;
-
-      // Campaign
-      if (data.activeCampaign) {
-        const c = data.activeCampaign;
-        const cpl = c.budget_monthly > 0 ? formatCurrency(c.budget_monthly / (data.stats.totalLeads || 1)) : '—';
-        document.getElementById('campaignBody').innerHTML = `
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <strong style="font-size:15px">${c.name}</strong>
-            ${statusBadge(c.status)}
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div><div class="stat-label">Monatsbudget</div><div style="font-size:18px;font-weight:700">${formatCurrency(c.budget_monthly)}</div></div>
-            <div><div class="stat-label">Kosten / Lead</div><div style="font-size:18px;font-weight:700">${cpl}</div></div>
-          </div>
-          ${c.platform ? `<div class="text-sm text-muted" style="margin-top:8px">Plattform: ${c.platform}</div>` : ''}
-        `;
-      } else {
-        document.getElementById('campaignBody').innerHTML = '<p class="text-muted text-sm">Keine aktive Kampagne</p>';
+      // Welcome
+      const settings = await API.get('/api/client/settings').catch(() => null);
+      if (settings) {
+        document.getElementById('welcomeTitle').textContent = 'Hallo, ' + (settings.contact_name || 'Willkommen') + '!';
       }
 
-      // Status breakdown
-      const total = data.stats.totalLeads || 1;
-      document.getElementById('statusBreakdown').innerHTML = (data.statusBreakdown || []).map(s => `
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-          ${statusBadge(s.status)}
-          <div style="flex:1;height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden">
-            <div style="height:100%;background:var(--primary);border-radius:4px;width:${Math.round(s.count/total*100)}%"></div>
+      // Hero
+      document.getElementById('heroLeads').textContent = s.leadsThisMonth;
+      document.getElementById('heroTotal').textContent = s.totalLeads;
+
+      // Trend chip (based on new leads vs total)
+      const trendEl = document.getElementById('heroTrend');
+      if (s.leadsThisMonth > 0) {
+        trendEl.innerHTML = `<span style="background:rgba(255,255,255,0.2);padding:3px 10px;border-radius:99px;font-size:12px">&#128200; Diesen Monat</span>`;
+      }
+
+      // Stats
+      const breakdown = {};
+      (data.statusBreakdown || []).forEach(b => breakdown[b.status] = b.count);
+      document.getElementById('statOpen').textContent = s.newLeads;
+      document.getElementById('statContacted').textContent = (breakdown.contacted || 0) + (breakdown.appointment || 0);
+      document.getElementById('statClosed').textContent = breakdown.closed || 0;
+
+      // Recent leads
+      const leads = data.recentLeads || [];
+      if (!leads.length) {
+        document.getElementById('recentLeadsList').innerHTML = `
+          <div class="empty-state" style="padding:32px">
+            <div class="empty-state-icon">&#127919;</div>
+            <p>Noch keine Anfragen vorhanden.</p>
+          </div>`;
+      } else {
+        document.getElementById('recentLeadsList').innerHTML = leads.map(l => `
+          <div class="lead-row" onclick="location.href='/client/leads.html?id=${l.id}'" style="cursor:pointer">
+            <div class="lead-avatar">${l.name.charAt(0).toUpperCase()}</div>
+            <div style="flex:1">
+              <div class="lead-row-name">${l.name}</div>
+              <div class="lead-row-sub">${l.phone || l.email || '—'} &middot; ${l.region || 'Keine Region'}</div>
+            </div>
+            <div>${statusBadge(l.status)}</div>
           </div>
-          <span style="font-size:13px;font-weight:600;min-width:24px;text-align:right">${s.count}</span>
-        </div>
-      `).join('') || '<p class="text-muted text-sm">Keine Daten</p>';
+        `).join('');
+      }
+
+      // Campaign status
+      const c = data.activeCampaign;
+      const cardEl = document.getElementById('campaignStatusCard');
+      if (c) {
+        const msgMap = {
+          active: { msg: 'Ihre Kampagne läuft aktiv und generiert neue Anfragen.', cls: 'active', icon: '&#128994;' },
+          paused: { msg: 'Ihre Kampagne ist aktuell pausiert. Sprechen Sie uns an.', cls: 'paused', icon: '&#128993;' },
+          ended:  { msg: 'Diese Kampagne wurde abgeschlossen.', cls: 'paused', icon: '&#9898;' }
+        };
+        const info = msgMap[c.status] || msgMap.active;
+        cardEl.innerHTML = `
+          <div class="campaign-status-card ${info.cls}">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span style="font-size:20px">${info.icon}</span>
+              <span class="cs-title">${c.name}</span>
+            </div>
+            <div class="cs-message">${info.msg}</div>
+            <div style="margin-top:12px">
+              <a href="/client/campaigns.html" style="font-size:13px;color:var(--primary);font-weight:500">Details ansehen →</a>
+            </div>
+          </div>
+        `;
+      } else {
+        cardEl.innerHTML = `
+          <div class="campaign-status-card paused">
+            <div class="cs-title">&#9898; Keine aktive Kampagne</div>
+            <div class="cs-message">Aktuell läuft keine Kampagne. Bitte sprechen Sie uns an.</div>
+          </div>
+        `;
+      }
 
     } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function explainResults() {
+    const btn = document.getElementById('btnExplain');
+    const resultEl = document.getElementById('explainResult');
+    btn.disabled = true;
+    btn.textContent = 'KI analysiert...';
+    resultEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:16px;color:var(--gray-500)">
+        <div class="ai-dot-pulse"><span></span><span></span><span></span></div>
+        Einen Moment bitte...
+      </div>`;
+    try {
+      const res = await API.post('/api/client/explain', {});
+      resultEl.innerHTML = `<div class="ai-explain-box">&#129504; ${res.explanation}</div>`;
+    } catch(e) {
+      resultEl.innerHTML = `<div class="alert alert-warning" style="margin-top:12px">&#128274; KI-Funktion nicht verfügbar. Bitte ANTHROPIC_API_KEY in der .env konfigurieren.</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Ergebnisse erklären lassen';
+    }
   }
 
   loadDashboard();

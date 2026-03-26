@@ -3,22 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mein Portal – Kampagnen</title>
+  <title>Mein Portal – Meine Kampagne</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <div class="app-layout">
   <aside class="sidebar">
-    <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Mein Portal<span class="sidebar-badge client">Kunde</span></div></div>
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Mein Portal<span class="sidebar-badge client">Kunde</span></div>
+    </div>
     <nav class="sidebar-nav">
       <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
-      <div class="nav-item" data-key="dashboard" onclick="window.location.href='/client/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
-      <div class="nav-section"><span class="nav-section-label">Meine Daten</span></div>
-      <div class="nav-item" data-key="leads" onclick="window.location.href='/client/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
-      <div class="nav-item active" data-key="campaigns" onclick="window.location.href='/client/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
-      <div class="nav-item" data-key="documents" onclick="window.location.href='/client/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+      <div class="nav-item" data-key="dashboard" onclick="location.href='/client/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Meine Anfragen</span></div>
+      <div class="nav-item" data-key="leads" onclick="location.href='/client/leads.html'"><span class="nav-icon">&#127919;</span> Meine Leads</div>
+      <div class="nav-item active" data-key="campaigns" onclick="location.href='/client/campaigns.html'"><span class="nav-icon">&#128202;</span> Meine Kampagne</div>
+      <div class="nav-section"><span class="nav-section-label">Finanzen</span></div>
+      <div class="nav-item" data-key="documents" onclick="location.href='/client/documents.html'"><span class="nav-icon">&#128196;</span> Rechnungen &amp; Angebote</div>
       <div class="nav-section"><span class="nav-section-label">Konto</span></div>
-      <div class="nav-item" data-key="settings" onclick="window.location.href='/client/settings.html'"><span class="nav-icon">&#9881;</span> Einstellungen</div>
+      <div class="nav-item" data-key="settings" onclick="location.href='/client/settings.html'"><span class="nav-icon">&#9881;</span> Einstellungen</div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info"><div class="user-avatar" id="sidebarAvatar">K</div><div><div class="user-name" id="sidebarUserName">Kunde</div><div class="user-role">Kundenportal</div></div></div>
@@ -28,88 +31,127 @@
 
   <main class="main-content">
     <div class="page-header">
-      <h1 class="page-title">Meine Kampagnen</h1>
+      <h1 class="page-title">Meine Kampagne</h1>
     </div>
-    <div class="page-body" id="campaignsContent">
+    <div class="page-body" id="campaignContent">
       <div class="loading-overlay">Laden...</div>
     </div>
   </main>
 </div>
 
 <div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
-<style>.toast-success{background:#16a34a}.toast-error{background:#dc2626}</style>
 
 <script src="/js/api.js"></script>
 <script>
   requireAuth('client');
   initNav('campaigns');
 
+  // Friendly status messages – no marketing jargon
+  const statusMessages = {
+    active: {
+      title: 'Ihre Werbung läuft aktiv',
+      message: 'Wir schalten aktuell Werbung für Ihr Unternehmen und generieren neue Anfragen. Alles läuft nach Plan.',
+      icon: '&#128994;',
+      cls: 'active',
+      detail: 'Sobald eine neue Anfrage eingeht, wird diese automatisch in Ihrer Lead-Liste eingetragen.'
+    },
+    paused: {
+      title: 'Kampagne ist pausiert',
+      message: 'Ihre Werbung ist momentan ausgesetzt. Mögliche Gründe: Budgetanpassung, saisonale Pause oder Optimierung.',
+      icon: '&#128993;',
+      cls: 'paused',
+      detail: 'Bei Fragen wenden Sie sich gerne an uns. Wir schalten die Kampagne schnell wieder aktiv.'
+    },
+    ended: {
+      title: 'Diese Kampagne wurde abgeschlossen',
+      message: 'Die Kampagne ist beendet. Die generierten Leads sind weiterhin in Ihrer Liste sichtbar.',
+      icon: '&#9898;',
+      cls: 'paused',
+      detail: 'Sprechen Sie uns an, wenn Sie eine neue Kampagne starten möchten.'
+    }
+  };
+
   async function loadCampaigns() {
     try {
       const campaigns = await API.get('/api/client/campaigns');
-      const container = document.getElementById('campaignsContent');
+      const container = document.getElementById('campaignContent');
 
       if (!campaigns.length) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#128202;</div><h3>Keine Kampagnen</h3><p>Es sind noch keine Kampagnen für Ihr Konto hinterlegt.</p></div>`;
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">&#128202;</div>
+            <h3>Noch keine Kampagne</h3>
+            <p>Es wurde noch keine Kampagne für Ihr Konto eingerichtet.<br>Bitte sprechen Sie uns an.</p>
+          </div>`;
         return;
       }
 
-      container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px">
-        ${campaigns.map(c => `
-          <div class="card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">${c.name}</div>
-                ${c.platform ? `<div class="text-sm text-muted">${c.platform}</div>` : ''}
-              </div>
-              ${statusBadge(c.status)}
-            </div>
-            <div class="card-body">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-                <div class="stat-card" style="padding:14px">
-                  <div class="stat-label">Leads gesamt</div>
-                  <div class="stat-value" style="font-size:24px">${c.lead_count}</div>
-                </div>
-                <div class="stat-card" style="padding:14px">
-                  <div class="stat-label">Abgeschlossen</div>
-                  <div class="stat-value" style="font-size:24px;color:var(--success)">${c.closed_leads}</div>
-                </div>
-                <div class="stat-card" style="padding:14px">
-                  <div class="stat-label">Monatsbudget</div>
-                  <div style="font-size:18px;font-weight:700;margin-top:4px">${formatCurrency(c.budget_monthly)}</div>
-                </div>
-                <div class="stat-card" style="padding:14px">
-                  <div class="stat-label">Kosten / Lead</div>
-                  <div style="font-size:18px;font-weight:700;margin-top:4px">${c.cost_per_lead ? formatCurrency(c.cost_per_lead) : '—'}</div>
+      container.innerHTML = campaigns.map(c => {
+        const info = statusMessages[c.status] || statusMessages.active;
+        const successRate = c.lead_count > 0 ? Math.round((c.closed_leads / c.lead_count) * 100) : 0;
+
+        return `
+          <div style="max-width:680px;margin-bottom:24px">
+
+            <!-- Status card -->
+            <div class="campaign-status-card ${info.cls}" style="margin-bottom:20px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <span style="font-size:24px">${info.icon}</span>
+                <div>
+                  <div class="cs-title">${info.title}</div>
+                  <div style="font-size:12px;font-weight:500;color:var(--gray-500);margin-top:2px">${c.name}</div>
                 </div>
               </div>
-
-              ${c.start_date || c.end_date ? `
-                <div style="display:flex;gap:16px;font-size:13px;color:var(--gray-600)">
-                  ${c.start_date ? `<span>Start: ${formatDate(c.start_date)}</span>` : ''}
-                  ${c.end_date ? `<span>Ende: ${formatDate(c.end_date)}</span>` : ''}
-                </div>
-              ` : ''}
-
-              ${c.description ? `<p style="margin-top:12px;font-size:13px;color:var(--gray-600)">${c.description}</p>` : ''}
-
-              <!-- Progress bar: closed / total -->
-              ${c.lead_count > 0 ? `
-                <div style="margin-top:16px">
-                  <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-500);margin-bottom:4px">
-                    <span>Erfolgsrate</span>
-                    <span>${Math.round(c.closed_leads/c.lead_count*100)}%</span>
-                  </div>
-                  <div style="height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden">
-                    <div style="height:100%;background:var(--success);border-radius:4px;width:${Math.round(c.closed_leads/c.lead_count*100)}%"></div>
-                  </div>
-                </div>
-              ` : ''}
+              <div class="cs-message">${info.message}</div>
+              <div style="font-size:13px;color:var(--gray-500);margin-top:8px">${info.detail}</div>
             </div>
+
+            <!-- Simple stats – no CTR/CPC/CPL -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+              <div class="card" style="padding:20px">
+                <div style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Anfragen gesamt</div>
+                <div style="font-size:36px;font-weight:800;color:var(--gray-900)">${c.lead_count}</div>
+                <div style="font-size:12px;color:var(--gray-400);margin-top:4px">Alle Anfragen seit Start</div>
+              </div>
+              <div class="card" style="padding:20px">
+                <div style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Erfolgreich abgeschlossen</div>
+                <div style="font-size:36px;font-weight:800;color:var(--success)">${c.closed_leads}</div>
+                <div style="font-size:12px;color:var(--gray-400);margin-top:4px">Von Ihnen als abgeschlossen markiert</div>
+              </div>
+            </div>
+
+            ${c.lead_count > 0 ? `
+              <!-- Progress without jargon -->
+              <div class="card" style="padding:20px;margin-bottom:20px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                  <span style="font-size:13px;font-weight:600;color:var(--gray-700)">Ihre Abschluss-Quote</span>
+                  <span style="font-size:18px;font-weight:700;color:var(--success)">${successRate}%</span>
+                </div>
+                <div style="height:10px;background:var(--gray-100);border-radius:5px;overflow:hidden">
+                  <div style="height:100%;background:var(--success);border-radius:5px;width:${successRate}%;transition:width 0.5s"></div>
+                </div>
+                <div style="font-size:12px;color:var(--gray-400);margin-top:6px">
+                  ${c.closed_leads} von ${c.lead_count} Anfragen erfolgreich abgeschlossen
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Dates info if available -->
+            ${c.start_date ? `
+              <div class="card" style="padding:16px">
+                <div style="display:flex;gap:24px;font-size:13px">
+                  <div><span style="color:var(--gray-500)">Kampagnenstart: </span><strong>${formatDate(c.start_date)}</strong></div>
+                  ${c.end_date ? `<div><span style="color:var(--gray-500)">Geplantes Ende: </span><strong>${formatDate(c.end_date)}</strong></div>` : ''}
+                  ${c.platform ? `<div><span style="color:var(--gray-500)">Plattform: </span><strong>${c.platform}</strong></div>` : ''}
+                </div>
+              </div>
+            ` : ''}
+
           </div>
-        `).join('')}
-      </div>`;
-    } catch(e) { showToast(e.message,'error'); }
+        `;
+      }).join('');
+
+    } catch(e) { showToast(e.message, 'error'); }
   }
 
   loadCampaigns();

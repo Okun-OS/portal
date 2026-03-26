@@ -122,6 +122,59 @@ function initializeDatabase() {
       body        TEXT NOT NULL,
       sent_at     TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Campaign Metrics (admin only – not visible to clients)
+    CREATE TABLE IF NOT EXISTS campaign_metrics (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_id     INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+      date            TEXT    NOT NULL,
+      impressions     INTEGER DEFAULT 0,
+      clicks          INTEGER DEFAULT 0,
+      spend           REAL    DEFAULT 0,
+      leads_generated INTEGER DEFAULT 0,
+      conversions     INTEGER DEFAULT 0,
+      created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(campaign_id, date)
+    );
+
+    -- AI Analyses (admin workspace – never exposed to clients)
+    CREATE TABLE IF NOT EXISTS ai_analyses (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+      campaign_id INTEGER REFERENCES campaigns(id) ON DELETE SET NULL,
+      type        TEXT NOT NULL, -- 'strategy' | 'ad_copy' | 'funnel' | 'optimization' | 'explain'
+      prompt_data TEXT,          -- JSON: input context
+      result      TEXT,          -- AI response text
+      created_by  TEXT NOT NULL DEFAULT 'admin',
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Optimization Tasks (internal to-do list)
+    CREATE TABLE IF NOT EXISTS optimization_tasks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+      campaign_id INTEGER REFERENCES campaigns(id) ON DELETE SET NULL,
+      title       TEXT NOT NULL,
+      description TEXT,
+      priority    TEXT NOT NULL DEFAULT 'medium', -- 'low' | 'medium' | 'high'
+      status      TEXT NOT NULL DEFAULT 'open',   -- 'open' | 'in_progress' | 'done'
+      source      TEXT NOT NULL DEFAULT 'manual', -- 'manual' | 'ai'
+      created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Ad Creatives (AI-generated or manual copy)
+    CREATE TABLE IF NOT EXISTS ad_creatives (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      campaign_id INTEGER REFERENCES campaigns(id) ON DELETE SET NULL,
+      type        TEXT NOT NULL, -- 'hook' | 'headline' | 'body' | 'landing_page' | 'cta'
+      title       TEXT NOT NULL,
+      content     TEXT NOT NULL,
+      status      TEXT NOT NULL DEFAULT 'draft', -- 'draft' | 'active' | 'archived'
+      source      TEXT NOT NULL DEFAULT 'manual', -- 'manual' | 'ai'
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   // Seed admin user if not exists

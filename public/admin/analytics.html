@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – Analytics</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" data-key="dashboard" onclick="location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Kunden & Leads</span></div>
+      <div class="nav-item" data-key="customers" onclick="location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" data-key="leads" onclick="location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-section"><span class="nav-section-label">Kampagnen</span></div>
+      <div class="nav-item" data-key="campaigns" onclick="location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
+      <div class="nav-item active" data-key="analytics" onclick="location.href='/admin/analytics.html'"><span class="nav-icon">&#128200;</span> Analytics</div>
+      <div class="nav-section"><span class="nav-section-label">KI-Tools</span></div>
+      <div class="nav-item" data-key="ai" onclick="location.href='/admin/ai-tools.html'"><span class="nav-icon">&#129504;</span> Analyse & Studio</div>
+      <div class="nav-item" data-key="tasks" onclick="location.href='/admin/tasks.html'"><span class="nav-icon">&#9989;</span> Optimierungs-Tasks</div>
+      <div class="nav-section"><span class="nav-section-label">Dokumente</span></div>
+      <div class="nav-item" data-key="documents" onclick="location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Kampagnen-Analytics</h1>
+      <button class="btn btn-primary" onclick="openModal('modalAddMetrics')">&#43; Metriken eintragen</button>
+    </div>
+    <div class="page-body">
+
+      <!-- Selector -->
+      <div class="card mb-4">
+        <div class="card-body" style="padding:14px 20px">
+          <div class="search-bar">
+            <select id="selCampaign" class="form-control" style="width:260px" onchange="loadMetrics()">
+              <option value="">-- Kampagne wählen --</option>
+            </select>
+            <select id="selDays" class="form-control" style="width:160px" onchange="loadMetrics()">
+              <option value="7">Letzte 7 Tage</option>
+              <option value="30" selected>Letzte 30 Tage</option>
+              <option value="60">Letzte 60 Tage</option>
+              <option value="90">Letzte 90 Tage</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI cards – hidden until campaign selected -->
+      <div id="analyticsContent" style="display:none">
+
+        <!-- Metric cards -->
+        <div class="metric-grid" id="metricCards"></div>
+
+        <!-- Chart + table -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Leads pro Tag</span></div>
+            <div class="card-body">
+              <div id="leadsChart" class="bar-chart" style="height:120px"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Ausgaben pro Tag (€)</span></div>
+            <div class="card-body">
+              <div id="spendChart" class="bar-chart" style="height:120px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily table -->
+        <div class="card" style="margin-top:20px">
+          <div class="card-header">
+            <span class="card-title">Tagesübersicht</span>
+          </div>
+          <div class="table-wrapper" id="metricsTable"></div>
+        </div>
+      </div>
+
+      <div id="noSelection" class="empty-state" style="margin-top:40px">
+        <div class="empty-state-icon">&#128200;</div>
+        <h3>Kampagne auswählen</h3>
+        <p>Wähle eine Kampagne aus, um die Analytics anzuzeigen.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Metrics Modal -->
+<div class="modal-overlay" id="modalAddMetrics">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Metriken eintragen</span>
+      <button class="modal-close" onclick="closeModal('modalAddMetrics')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info">&#128161; Metriken können direkt aus Facebook Ads Manager oder Google Ads Dashboards übertragen werden.</div>
+      <div class="form-group">
+        <label class="form-label">Kampagne <span class="required">*</span></label>
+        <select id="mCampaign" class="form-control"><option value="">-- Auswählen --</option></select>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Datum <span class="required">*</span></label>
+          <input type="date" id="mDate" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Impressionen</label>
+          <input type="number" id="mImpressions" class="form-control" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Klicks</label>
+          <input type="number" id="mClicks" class="form-control" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ausgaben (€)</label>
+          <input type="number" id="mSpend" class="form-control" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Generierte Leads</label>
+          <input type="number" id="mLeads" class="form-control" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Conversions</label>
+          <input type="number" id="mConversions" class="form-control" placeholder="0" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalAddMetrics')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveMetrics()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
+
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  initNav('analytics');
+
+  // Set today as default date
+  document.getElementById('mDate').value = new Date().toISOString().slice(0, 10);
+
+  async function init() {
+    const campaigns = await API.get('/api/admin/campaigns');
+    [document.getElementById('selCampaign'), document.getElementById('mCampaign')].forEach(sel => {
+      campaigns.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = `${c.company_name} – ${c.name}`;
+        sel.appendChild(o);
+      });
+    });
+  }
+
+  async function loadMetrics() {
+    const cid = document.getElementById('selCampaign').value;
+    const days = document.getElementById('selDays').value;
+
+    if (!cid) {
+      document.getElementById('analyticsContent').style.display = 'none';
+      document.getElementById('noSelection').style.display = 'block';
+      return;
+    }
+
+    try {
+      const data = await API.get(`/api/admin/metrics?campaign_id=${cid}&days=${days}`);
+      document.getElementById('noSelection').style.display = 'none';
+      document.getElementById('analyticsContent').style.display = 'block';
+      renderMetrics(data);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  function renderMetrics(data) {
+    const t = data.totals;
+
+    document.getElementById('metricCards').innerHTML = `
+      <div class="metric-card"><div class="metric-label">Impressionen</div><div class="metric-value">${t.impressions.toLocaleString('de-DE')}</div><div class="metric-sub">Gesamtreichweite</div></div>
+      <div class="metric-card purple"><div class="metric-label">Klicks</div><div class="metric-value">${t.clicks.toLocaleString('de-DE')}</div><div class="metric-sub">CTR: ${t.ctr}%</div></div>
+      <div class="metric-card green"><div class="metric-label">Leads</div><div class="metric-value">${t.leads_generated}</div><div class="metric-sub">CPL: ${t.cpl}€</div></div>
+      <div class="metric-card orange"><div class="metric-label">Ausgaben</div><div class="metric-value">${formatCurrency(t.spend)}</div><div class="metric-sub">CPC: ${t.cpc}€</div></div>
+      <div class="metric-card"><div class="metric-label">Conversions</div><div class="metric-value">${t.conversions}</div><div class="metric-sub">Conv.Rate: ${t.conversion_rate}%</div></div>
+    `;
+
+    // Bar charts
+    renderBarChart('leadsChart', data.rows, 'leads_generated', '#2563eb');
+    renderBarChart('spendChart', data.rows, 'spend', '#16a34a');
+
+    // Table
+    if (!data.rows.length) {
+      document.getElementById('metricsTable').innerHTML = '<div class="empty-state" style="padding:32px"><p class="text-muted">Noch keine Metriken eingetragen.</p></div>';
+      return;
+    }
+
+    const rows = data.rows.map(r => {
+      const ctr = r.impressions > 0 ? ((r.clicks / r.impressions) * 100).toFixed(2) : '—';
+      const cpc = r.clicks > 0 ? (r.spend / r.clicks).toFixed(2) : '—';
+      const cpl = r.leads_generated > 0 ? (r.spend / r.leads_generated).toFixed(2) : '—';
+      return `
+        <tr>
+          <td>${formatDate(r.date)}</td>
+          <td>${r.impressions.toLocaleString('de-DE')}</td>
+          <td>${r.clicks.toLocaleString('de-DE')}</td>
+          <td>${ctr !== '—' ? ctr + '%' : '—'}</td>
+          <td>${formatCurrency(r.spend)}</td>
+          <td>${cpc !== '—' ? cpc + '€' : '—'}</td>
+          <td><strong>${r.leads_generated}</strong></td>
+          <td>${cpl !== '—' ? cpl + '€' : '—'}</td>
+          <td>${r.conversions}</td>
+          <td><button class="btn btn-sm btn-danger" onclick="deleteMetric(${r.id})">&#215;</button></td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('metricsTable').innerHTML = `
+      <table>
+        <thead><tr><th>Datum</th><th>Impressionen</th><th>Klicks</th><th>CTR</th><th>Ausgaben</th><th>CPC</th><th>Leads</th><th>CPL</th><th>Conversions</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function renderBarChart(containerId, rows, field, color) {
+    const el = document.getElementById(containerId);
+    if (!rows.length) { el.innerHTML = '<p class="text-muted text-sm" style="padding:8px">Keine Daten</p>'; return; }
+    const max = Math.max(...rows.map(r => Number(r[field]) || 0), 1);
+    el.innerHTML = rows.map(r => {
+      const val = Number(r[field]) || 0;
+      const h = Math.round((val / max) * 90);
+      const label = r.date.slice(5); // MM-DD
+      const display = field === 'spend' ? formatCurrency(val) : val;
+      return `
+        <div class="bar-col">
+          <div class="bar-val">${display}</div>
+          <div class="bar-fill" style="height:${h}px;background:${color}"></div>
+          <div class="bar-label">${label}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function saveMetrics() {
+    const body = {
+      campaign_id: document.getElementById('mCampaign').value,
+      date: document.getElementById('mDate').value,
+      impressions: parseInt(document.getElementById('mImpressions').value) || 0,
+      clicks: parseInt(document.getElementById('mClicks').value) || 0,
+      spend: parseFloat(document.getElementById('mSpend').value) || 0,
+      leads_generated: parseInt(document.getElementById('mLeads').value) || 0,
+      conversions: parseInt(document.getElementById('mConversions').value) || 0,
+    };
+
+    if (!body.campaign_id || !body.date) {
+      showToast('Kampagne und Datum erforderlich', 'error');
+      return;
+    }
+
+    try {
+      await API.post('/api/admin/metrics', body);
+      closeModal('modalAddMetrics');
+      showToast('Metriken gespeichert');
+      // Auto-switch to that campaign
+      document.getElementById('selCampaign').value = body.campaign_id;
+      loadMetrics();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function deleteMetric(id) {
+    if (!confirm('Eintrag löschen?')) return;
+    try {
+      await API.del('/api/admin/metrics/' + id);
+      showToast('Gelöscht');
+      loadMetrics();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  init();
+</script>
+</body>
+</html>

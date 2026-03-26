@@ -20,6 +20,9 @@ app.use('/api/admin/customers', require('./routes/admin/customers'));
 app.use('/api/admin/leads', require('./routes/admin/leads'));
 app.use('/api/admin/campaigns', require('./routes/admin/campaigns'));
 app.use('/api/admin/documents', require('./routes/admin/documents'));
+app.use('/api/admin/metrics', require('./routes/admin/metrics'));
+app.use('/api/admin/tasks', require('./routes/admin/tasks'));
+app.use('/api/admin/ai', require('./routes/admin/ai'));
 
 // Admin stats
 const { requireAdmin } = require('./middleware/auth');
@@ -51,6 +54,7 @@ app.use('/api/client/leads', require('./routes/client/leads'));
 app.use('/api/client/campaigns', require('./routes/client/campaigns'));
 app.use('/api/client/documents', require('./routes/client/documents'));
 app.use('/api/client/settings', require('./routes/client/settings'));
+app.use('/api/client/explain', require('./routes/client/explain'));
 
 // SPA fallback – serve index.html for all non-API routes
 app.get('*', (req, res) => {
