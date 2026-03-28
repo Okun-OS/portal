@@ -1,0 +1,12 @@
+{
+  "name": "Lead Management Portal",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "postCreateCommand": "npm install",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Portal",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}

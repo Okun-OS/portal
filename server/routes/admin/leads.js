@@ -99,17 +99,19 @@ router.post('/import', requireAdmin, (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, 'new', 'normal')
   `);
 
-  const insertMany = db.transaction((leads) => {
-    let count = 0;
+  let count = 0;
+  db.exec('BEGIN');
+  try {
     for (const lead of leads) {
       if (!lead.name) continue;
       insertLead.run(customer_id, campaign_id || null, lead.name, lead.email || null, lead.phone || null, lead.region || null, lead.source || null);
       count++;
     }
-    return count;
-  });
-
-  const count = insertMany(leads);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
   res.json({ imported: count });
 });
 
