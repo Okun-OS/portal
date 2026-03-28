@@ -10,7 +10,7 @@ router.post('/strategy', requireAdmin, async (req, res) => {
   if (!context) return res.status(400).json({ error: 'Kontext erforderlich' });
 
   try {
-    const result = await ai.analyzeStrategy(context);
+    const { result, campaignContext } = await ai.analyzeStrategy(context);
 
     if (customer_id) {
       db.prepare(`
@@ -19,7 +19,7 @@ router.post('/strategy', requireAdmin, async (req, res) => {
       `).run(customer_id, JSON.stringify(context), result, req.user.name);
     }
 
-    res.json({ result });
+    res.json({ result, campaignContext });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -76,7 +76,6 @@ router.post('/optimize', requireAdmin, async (req, res) => {
       VALUES (?, ?, 'optimization', ?, ?, ?)
     `).run(customer_id || null, campaign_id || null, JSON.stringify(context), JSON.stringify(result), req.user.name);
 
-    // Auto-create tasks if tasks array exists
     if (result.tasks && Array.isArray(result.tasks) && customer_id) {
       const insert = db.prepare(`
         INSERT INTO optimization_tasks (customer_id, campaign_id, title, description, priority, source)
@@ -93,7 +92,31 @@ router.post('/optimize', requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/ai/history?customer_id=&type=
+// POST /api/admin/ai/complete-campaign
+router.post('/complete-campaign', requireAdmin, async (req, res) => {
+  const { customer_id, campaign_id, context } = req.body;
+  if (!context) return res.status(400).json({ error: 'Kontext erforderlich' });
+
+  try {
+    const result = await ai.createCompleteCampaign(context);
+
+    if (customer_id) {
+      const saveAnalysis = db.prepare(`
+        INSERT INTO ai_analyses (customer_id, campaign_id, type, prompt_data, result, created_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      saveAnalysis.run(customer_id, campaign_id || null, 'strategy', JSON.stringify(context), result.strategy, req.user.name);
+      saveAnalysis.run(customer_id, campaign_id || null, 'ad_copy', JSON.stringify(result.campaignContext), result.adCopy, req.user.name);
+      saveAnalysis.run(customer_id, campaign_id || null, 'funnel', JSON.stringify(result.campaignContext), result.funnel, req.user.name);
+    }
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/ai/history
 router.get('/history', requireAdmin, (req, res) => {
   const { customer_id, type } = req.query;
   let where = '1=1';
@@ -116,7 +139,6 @@ router.get('/history', requireAdmin, (req, res) => {
   res.json(rows);
 });
 
-// GET /api/admin/ai/history/:id  – full result
 router.get('/history/:id', requireAdmin, (req, res) => {
   const row = db.prepare('SELECT * FROM ai_analyses WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Analyse nicht gefunden' });
@@ -124,7 +146,6 @@ router.get('/history/:id', requireAdmin, (req, res) => {
 });
 
 // Ad Creatives CRUD
-// GET /api/admin/ai/creatives?customer_id=
 router.get('/creatives', requireAdmin, (req, res) => {
   const { customer_id, campaign_id } = req.query;
   let where = '1=1';
@@ -144,22 +165,18 @@ router.get('/creatives', requireAdmin, (req, res) => {
   res.json(rows);
 });
 
-// POST /api/admin/ai/creatives
 router.post('/creatives', requireAdmin, (req, res) => {
   const { customer_id, campaign_id, type, title, content, status, source } = req.body;
   if (!customer_id || !type || !title || !content) {
     return res.status(400).json({ error: 'Pflichtfelder fehlen' });
   }
-
   const result = db.prepare(`
     INSERT INTO ad_creatives (customer_id, campaign_id, type, title, content, status, source)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(customer_id, campaign_id || null, type, title, content, status || 'draft', source || 'manual');
-
   res.status(201).json({ id: result.lastInsertRowid });
 });
 
-// PUT /api/admin/ai/creatives/:id
 router.put('/creatives/:id', requireAdmin, (req, res) => {
   const { title, content, status } = req.body;
   db.prepare('UPDATE ad_creatives SET title = COALESCE(?, title), content = COALESCE(?, content), status = COALESCE(?, status) WHERE id = ?')
@@ -167,7 +184,6 @@ router.put('/creatives/:id', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
-// DELETE /api/admin/ai/creatives/:id
 router.delete('/creatives/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM ad_creatives WHERE id = ?').run(req.params.id);
   res.json({ success: true });

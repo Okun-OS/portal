@@ -8,92 +8,176 @@ function getClient() {
 
 const MODEL = 'claude-sonnet-4-6';
 
-// Generic text generation
-async function generate(systemPrompt, userPrompt) {
+async function generate(systemPrompt, userPrompt, maxTokens = 2048) {
   const client = getClient();
   const msg = await client.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }]
   });
   return msg.content[0].text;
 }
 
-// 1. Strategy Analysis – internal admin view
-async function analyzeStrategy(context) {
-  const system = `Du bist ein erfahrener Performance-Marketing-Experte für Lead-Generierung.
-Du analysierst Kunden-Setups und gibst konkrete, umsetzbare Empfehlungen auf Deutsch.
-Antworte strukturiert mit klaren Abschnitten. Nutze Markdown-Formatierung.`;
-
-  const prompt = `Analysiere folgendes Setup und gib eine vollständige Strategie-Analyse:
-
-**Kunde:** ${context.company} (Branche: ${context.industry || 'unbekannt'})
-**Aktuelles Angebot/Dienstleistung:** ${context.offer || 'nicht angegeben'}
-**Website:** ${context.website || 'nicht angegeben'}
-**Zielregion:** ${context.region || 'nicht angegeben'}
-**Bisherige Kampagnen:** ${context.campaigns || 'keine Daten'}
-**Zusätzliche Infos:** ${context.notes || 'keine'}
-
-Bitte analysiere und strukturiere deine Antwort in folgende Abschnitte:
-1. **Stärken & Chancen**
-2. **Schwächen & Risiken**
-3. **Zielgruppen-Empfehlung** (demographisch & psychographisch)
-4. **Empfohlene Kanäle** (Plattformen & Formate)
-5. **Budget-Empfehlung** (Aufteilung & Erwartungen)
-6. **Sofortige Handlungsempfehlungen** (Top 3 Prioritäten)`;
-
-  return generate(system, prompt);
+// Website scraper – extract meaningful text from a URL
+async function scrapeWebsite(url) {
+  try {
+    if (!url.startsWith('http')) url = 'https://' + url;
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LeadPortalBot/1.0)' }
+    });
+    const html = await response.text();
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+      .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+      .trim()
+      .slice(0, 3000);
+    return text || null;
+  } catch {
+    return null;
+  }
 }
 
-// 2. Generate Ad Hooks & Copy
+// 1. Strategy Analysis – returns { result, campaignContext }
+async function analyzeStrategy(context) {
+  const websiteContent = context.website ? await scrapeWebsite(context.website) : null;
+
+  const system = `Du bist ein erfahrener Performance-Marketing-Stratege für Lead-Generierung.
+Du analysierst Kunden-Setups tiefgründig und gibst konkrete, umsetzbare Empfehlungen auf Deutsch.
+Du erkennst automatisch Zielgruppen, Pain Points, USPs und Marktchancen – auch wenn der User wenig Input liefert.
+Antworte strukturiert mit Markdown. Am Ende IMMER den JSON-Block im vorgegebenen Format ausgeben.`;
+
+  const websiteSection = websiteContent
+    ? `\n\n**Analysierter Website-Inhalt:**\n${websiteContent}`
+    : '';
+
+  const prompt = `Analysiere folgendes Setup und erstelle eine vollständige Marketing-Strategie-Analyse:
+
+**Kunde/Branche:** ${context.company || context.industry || 'nicht angegeben'}
+**Angebot/Dienstleistung:** ${context.offer || 'nicht angegeben'}
+**Website:** ${context.website || 'keine'}${websiteSection}
+**Zielregion:** ${context.region || 'nicht angegeben'}
+**Bisherige Erfahrungen:** ${context.notes || 'keine'}
+
+Erstelle eine tiefgründige Analyse in diesen Abschnitten:
+
+## 1. Markt & Zielgruppen-Analyse
+Wer sind die idealen Kunden? Demographisch UND psychographisch. Typische Pain Points, Kaufmotive, Einwände.
+
+## 2. Angebots-Bewertung & USP
+Wie klar ist das Angebot? Was macht es einzigartig? Was fehlt?${websiteContent ? '\nWebsite-Einschätzung: Professionalität, Vertrauen, Conversion-Schwächen.' : ''}
+
+## 3. Empfohlene Kanäle & Formate
+Welche Plattformen, welche Anzeigenformate, welche Budgetverteilung?
+
+## 4. Sofortige Prioritäten (Top 3)
+Die 3 wichtigsten Maßnahmen mit konkreten nächsten Schritten.
+
+## 5. Erwartete Ergebnisse
+Realistische KPI-Erwartungen für die ersten 30/60/90 Tage.
+
+---CONTEXT_JSON---
+{
+  "angebot": "kurze Beschreibung des Angebots",
+  "zielgruppe": "Beschreibung der idealen Zielgruppe",
+  "branche": "Branche/Industrie",
+  "region": "Zielregion",
+  "usp": "wichtigstes Alleinstellungsmerkmal",
+  "website": "${context.website || ''}",
+  "analyseInsights": "wichtigste Erkenntnis der Analyse in 1-2 Sätzen",
+  "marketInsights": "Marktkontext und Wettbewerbssituation",
+  "trustLevel": "hoch|mittel|niedrig",
+  "conversionIssues": "wichtigste Conversion-Hürden",
+  "recommendedPlatform": "empfohlene Hauptplattform",
+  "targetAudience": "präzise Zielgruppenbeschreibung für Anzeigen"
+}
+---END_JSON---`;
+
+  const raw = await generate(system, prompt, 3000);
+
+  // Extract JSON context
+  const jsonMatch = raw.match(/---CONTEXT_JSON---\s*([\s\S]*?)\s*---END_JSON---/);
+  let campaignContext = null;
+  let analysisText = raw.replace(/---CONTEXT_JSON---[\s\S]*?---END_JSON---/, '').trim();
+
+  if (jsonMatch) {
+    try {
+      campaignContext = JSON.parse(jsonMatch[1]);
+    } catch {
+      // JSON parse failed, context stays null
+    }
+  }
+
+  return { result: analysisText, campaignContext };
+}
+
+// 2. Generate Ad Copy – uses campaignContext if available
 async function generateAdCopy(context) {
   const system = `Du bist ein erstklassiger Texter für bezahlte Werbung (Facebook, Instagram, Google Ads).
 Deine Texte sind präzise, wirkungsvoll und auf Konversion ausgelegt.
 Antworte ausschließlich auf Deutsch. Nutze psychologische Trigger und klare CTAs.`;
 
-  const prompt = `Erstelle Werbetexte für folgendes Setup:
+  const contextBlock = context.analyseInsights
+    ? `\n**Erkenntnisse aus der Strategie-Analyse:** ${context.analyseInsights}`
+    : '';
 
-**Branche:** ${context.industry}
-**Angebot:** ${context.offer}
-**Zielgruppe:** ${context.targetAudience || 'nicht angegeben'}
+  const prompt = `Erstelle hochwertige Werbetexte für folgendes Setup:
+
+**Branche:** ${context.branche || context.industry || 'nicht angegeben'}
+**Angebot:** ${context.angebot || context.offer || 'nicht angegeben'}
+**USP:** ${context.usp || 'nicht angegeben'}
+**Zielgruppe:** ${context.targetAudience || context.zielgruppe || context.targetAudience || 'nicht angegeben'}
+**Region:** ${context.region || 'nicht angegeben'}
 **Plattform:** ${context.platform || 'Facebook/Instagram'}
-**Ton:** ${context.tone || 'professionell, vertrauenswürdig'}
+**Ton:** ${context.tone || 'professionell, vertrauenswürdig'}${contextBlock}
 
 Liefere:
 ### 5 Hook-Varianten (erster Satz der Anzeige)
 ### 3 vollständige Anzeigentexte (Hook + Body + CTA)
-### 3 Headline-Varianten (für die Überschrift)
+### 3 Headline-Varianten
 ### 2 CTA-Formulierungen`;
 
   return generate(system, prompt);
 }
 
-// 3. Landing Page Concept
+// 3. Landing Page Concept – uses campaignContext if available
 async function generateFunnelConcept(context) {
   const system = `Du bist ein Conversion-Rate-Optimierungs-Experte für Lead-Generierungs-Landingpages.
 Erstelle detaillierte, umsetzbare Konzepte. Antworte auf Deutsch.`;
 
-  const prompt = `Erstelle ein Landingpage-Konzept für:
+  const contextBlock = context.analyseInsights
+    ? `\n**Erkenntnisse aus der Strategie-Analyse:** ${context.analyseInsights}
+**Conversion-Hürden:** ${context.conversionIssues || 'nicht analysiert'}`
+    : '';
 
-**Branche:** ${context.industry}
-**Angebot:** ${context.offer}
-**Zielgruppe:** ${context.targetAudience || 'Interessenten'}
-**Ziel der Page:** Lead-Formular ausfüllen (Name, Telefon, E-Mail)
+  const prompt = `Erstelle ein detailliertes Landingpage-Konzept für:
+
+**Branche:** ${context.branche || context.industry || 'nicht angegeben'}
+**Angebot:** ${context.angebot || context.offer || 'nicht angegeben'}
+**USP:** ${context.usp || 'nicht angegeben'}
+**Zielgruppe:** ${context.targetAudience || context.zielgruppe || 'Interessenten'}
+**Region:** ${context.region || 'nicht angegeben'}
+**Ziel:** Lead-Formular ausfüllen (Name, Telefon, E-Mail)${contextBlock}
 
 Liefere:
 ### Headline & Subheadline (3 Varianten)
 ### Above-the-fold Aufbau
 ### Vertrauenselemente (Social Proof, Trust-Signale)
 ### Formular-Design & Felder
-### Fließtext-Struktur (Sections)
-### Häufige Einwände & wie sie adressiert werden
+### Fließtext-Struktur (alle Sections mit Inhalt)
+### Häufige Einwände & Antworten
 ### Mobile-Optimierung Hinweise`;
 
   return generate(system, prompt);
 }
 
-// 4. Campaign Optimization Suggestions
+// 4. Campaign Optimization
 async function generateOptimizationTasks(context) {
   const system = `Du bist ein Performance-Marketing-Analyst.
 Analysiere Kampagnendaten und erstelle konkrete, priorisierte Optimierungs-Tasks.
@@ -101,7 +185,7 @@ Gib immer JSON zurück – kein zusätzlicher Text außerhalb des JSON.`;
 
   const prompt = `Analysiere diese Kampagnendaten und erstelle Optimierungs-Tasks:
 
-**Kampagne:** ${context.campaignName}
+**Kampagne:** ${context.campaignName || context.angebot || 'nicht angegeben'}
 **Plattform:** ${context.platform || 'nicht angegeben'}
 **Metriken der letzten 30 Tage:**
 - Impressionen: ${context.impressions || 0}
@@ -111,10 +195,11 @@ Gib immer JSON zurück – kein zusätzlicher Text außerhalb des JSON.`;
 - Leads: ${context.leads || 0}
 - CPL: ${context.cpl || 'unbekannt'}€
 - Budget/Monat: ${context.budget || 0}€
-
+**Angebot/Branche:** ${context.angebot || context.branche || 'nicht angegeben'}
+**Zielgruppe:** ${context.zielgruppe || 'nicht angegeben'}
 **Kontext:** ${context.notes || 'keine weiteren Infos'}
 
-Antworte NUR mit gültigem JSON in diesem Format:
+Antworte NUR mit gültigem JSON:
 {
   "tasks": [
     {
@@ -129,7 +214,6 @@ Antworte NUR mit gültigem JSON in diesem Format:
 
   const raw = await generate(system, prompt);
   try {
-    // extract JSON from response
     const match = raw.match(/\{[\s\S]*\}/);
     return JSON.parse(match ? match[0] : raw);
   } catch {
@@ -137,7 +221,22 @@ Antworte NUR mit gültigem JSON in diesem Format:
   }
 }
 
-// 5. Client-friendly explanation (simplified, no jargon)
+// 5. Complete Campaign – runs strategy + ads + funnel in sequence
+async function createCompleteCampaign(context) {
+  // Step 1: Strategy + context extraction
+  const { result: strategy, campaignContext } = await analyzeStrategy(context);
+
+  // Step 2: Use extracted context for ads
+  const mergedContext = { ...context, ...(campaignContext || {}) };
+  const adCopy = await generateAdCopy(mergedContext);
+
+  // Step 3: Funnel concept
+  const funnel = await generateFunnelConcept(mergedContext);
+
+  return { strategy, adCopy, funnel, campaignContext: mergedContext };
+}
+
+// 6. Client-friendly explanation
 async function explainForClient(context) {
   const system = `Du erklärst Marketing-Ergebnisse für Unternehmer ohne Marketing-Erfahrung.
 Deine Sprache ist freundlich, einfach und verständlich – kein Fachjargon.
@@ -161,4 +260,4 @@ Schreibe eine kurze, positive und motivierende Erklärung für den Kunden.`;
   return generate(system, prompt);
 }
 
-module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, explainForClient };
+module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient };
