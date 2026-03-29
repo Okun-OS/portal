@@ -66,6 +66,9 @@
         </div>
         <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
 
+        <!-- Performance Alerts (auto-detected) -->
+        <div id="alertsPanel" style="display:none;margin-bottom:16px"></div>
+
         <!-- Metric cards -->
         <div class="metric-grid" id="metricCards"></div>
 
@@ -186,10 +189,14 @@
     }
 
     try {
-      const data = await API.get(`/api/admin/metrics?campaign_id=${cid}&days=${days}`);
+      const [data, alertData] = await Promise.all([
+        API.get(`/api/admin/metrics?campaign_id=${cid}&days=${days}`),
+        API.get(`/api/admin/metrics/alerts?campaign_id=${cid}&days=${days}`).catch(() => null),
+      ]);
       document.getElementById('noSelection').style.display = 'none';
       document.getElementById('analyticsContent').style.display = 'block';
       renderMetrics(data);
+      renderAlerts(alertData);
       const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       document.getElementById('lastUpdated').textContent = 'Aktualisiert: ' + now;
       document.getElementById('liveIndicator').style.display = '';
@@ -208,6 +215,26 @@
   function stopAutoRefresh() {
     if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
     document.getElementById('liveIndicator').style.display = 'none';
+  }
+
+  function renderAlerts(alertData) {
+    const panel = document.getElementById('alertsPanel');
+    if (!alertData || !alertData.total_alerts) { panel.style.display = 'none'; return; }
+    const icons = { error: '&#128308;', warning: '&#128993;' };
+    const bgColors = { error: '#fef2f2', warning: '#fffbeb' };
+    const borderColors = { error: '#fca5a5', warning: '#fcd34d' };
+    let html = `<div style="font-size:13px;font-weight:600;margin-bottom:8px">&#9888; ${alertData.total_alerts} Performance-${alertData.total_alerts === 1 ? 'Warnung' : 'Warnungen'} erkannt</div>`;
+    for (const camp of alertData.campaigns) {
+      for (const a of camp.alerts) {
+        html += `<div style="background:${bgColors[a.level]};border:1px solid ${borderColors[a.level]};border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px">
+          <span>${icons[a.level]}</span>
+          <div><strong style="font-size:12px">${camp.campaign_name}</strong><span class="text-muted text-sm" style="margin-left:6px">${camp.platform || ''}</span><br>
+          <span style="font-size:12px">${a.message}</span></div>
+        </div>`;
+      }
+    }
+    panel.innerHTML = html;
+    panel.style.display = 'block';
   }
 
   function renderMetrics(data) {

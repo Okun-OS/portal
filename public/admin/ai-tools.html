@@ -420,23 +420,19 @@
     const ctx = window.campaignContext;
     if (!ctx || !ctx.angebot) return;
 
-    // Ad copy
-    if (document.getElementById('adIndustry').value === '') {
-      document.getElementById('adIndustry').value = (ctx.branche || '') + (ctx.region ? ', ' + ctx.region : '');
-      document.getElementById('adTarget').value = ctx.targetAudience || ctx.zielgruppe || '';
-      document.getElementById('adOffer').value = ctx.usp || '';
-      const hint = document.getElementById('adAutoHint');
-      if (hint) { hint.classList.add('visible'); }
-    }
+    // Ad copy – always overwrite from context (context is authoritative)
+    document.getElementById('adIndustry').value = (ctx.branche || '') + (ctx.region ? ', ' + ctx.region : '');
+    document.getElementById('adTarget').value = ctx.targetAudience || ctx.zielgruppe || '';
+    document.getElementById('adOffer').value = ctx.usp || '';
+    const adHint = document.getElementById('adAutoHint');
+    if (adHint) adHint.classList.add('visible');
 
-    // Funnel
-    if (document.getElementById('fIndustry2').value === '') {
-      document.getElementById('fIndustry2').value = ctx.branche || '';
-      document.getElementById('fOffer').value = ctx.angebot || '';
-      document.getElementById('fTarget').value = ctx.targetAudience || ctx.zielgruppe || '';
-      const hint = document.getElementById('funnelAutoHint');
-      if (hint) { hint.classList.add('visible'); }
-    }
+    // Funnel – always overwrite from context
+    document.getElementById('fIndustry2').value = ctx.branche || '';
+    document.getElementById('fOffer').value = ctx.angebot || '';
+    document.getElementById('fTarget').value = ctx.targetAudience || ctx.zielgruppe || '';
+    const fHint = document.getElementById('funnelAutoHint');
+    if (fHint) fHint.classList.add('visible');
 
     // Optimize hint
     const optHint = document.getElementById('optAutoHint');

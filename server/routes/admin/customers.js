@@ -9,7 +9,13 @@ router.get('/', requireAdmin, (req, res) => {
   const customers = db.prepare(`
     SELECT c.*, u.email as login_email,
       (SELECT COUNT(*) FROM leads WHERE customer_id = c.id) as lead_count,
-      (SELECT COUNT(*) FROM campaigns WHERE customer_id = c.id) as campaign_count
+      (SELECT COUNT(*) FROM campaigns WHERE customer_id = c.id) as campaign_count,
+      (SELECT COUNT(*) FROM campaigns WHERE customer_id = c.id AND status = 'active') as active_campaign_count,
+      (SELECT SUM(budget_monthly) FROM campaigns WHERE customer_id = c.id AND status = 'active') as budget_total,
+      (SELECT SUM(cm.leads_generated) FROM campaign_metrics cm JOIN campaigns ca ON ca.id = cm.campaign_id
+       WHERE ca.customer_id = c.id AND cm.date >= date('now', '-30 days')) as leads_30d,
+      (SELECT SUM(cm.spend) FROM campaign_metrics cm JOIN campaigns ca ON ca.id = cm.campaign_id
+       WHERE ca.customer_id = c.id AND cm.date >= date('now', '-30 days')) as spend_30d
     FROM customers c
     LEFT JOIN users u ON u.id = c.user_id
     ORDER BY c.created_at DESC

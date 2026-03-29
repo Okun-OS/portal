@@ -64,7 +64,8 @@
       <div class="tabs">
         <div class="tab active" onclick="switchTab('tabInfo')">Kundendaten</div>
         <div class="tab" onclick="switchTab('tabLogin')">Login-Zugang</div>
-        <div class="tab" id="tabCreativesBtn" onclick="switchTab('tabCreatives')" style="display:none">Creatives</div>
+        <div class="tab" id="tabPerfBtn" onclick="switchTab('tabPerf')" style="display:none">&#128200; Performance</div>
+        <div class="tab" id="tabCreativesBtn" onclick="switchTab('tabCreatives')" style="display:none">&#127912; Creatives</div>
       </div>
       <div id="tabInfo" class="tab-content active">
         <div class="form-grid">
@@ -119,6 +120,10 @@
           </div>
         </div>
       </div>
+      <div id="tabPerf" class="tab-content">
+        <div id="customerPerfContent"><div class="text-muted text-sm" style="padding:8px">Laden...</div></div>
+      </div>
+
       <div id="tabCreatives" class="tab-content">
         <div id="customerCreativesList"><div class="text-muted text-sm" style="padding:8px">Laden...</div></div>
       </div>
@@ -165,9 +170,8 @@
   function switchTab(id) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    const tabIds = ['tabInfo','tabLogin','tabCreatives'];
-    const tabBtns = document.querySelectorAll('.tab');
-    tabBtns.forEach((t, i) => { if (tabIds[i] === id) t.classList.add('active'); });
+    const tabIds = ['tabInfo','tabLogin','tabPerf','tabCreatives'];
+    document.querySelectorAll('.tab').forEach((t, i) => { if (tabIds[i] === id) t.classList.add('active'); });
     const el = document.getElementById(id);
     if (el) el.classList.add('active');
   }
@@ -190,9 +194,18 @@
         <td><strong>${c.company_name}</strong><br><span class="text-sm text-muted">${c.contact_name}</span></td>
         <td>${c.email}<br><span class="text-sm text-muted">${c.phone || '—'}</span></td>
         <td>${c.industry || '—'}</td>
+        <td>
+          <span style="font-weight:600">${c.active_campaign_count || 0}</span> aktiv
+          ${c.budget_total ? `<br><span style="font-size:11px;color:#15803d;font-weight:600">💶 ${c.budget_total}€/Mo</span>` : ''}
+        </td>
+        <td>
+          <span style="font-weight:600">${c.lead_count}</span> gesamt
+          ${c.leads_30d ? `<br><span style="font-size:11px;color:#6b7280">+${c.leads_30d} (30T)</span>` : ''}
+        </td>
+        <td>
+          ${c.spend_30d ? `<span style="font-weight:600;color:#c2410c">${parseFloat(c.spend_30d).toFixed(0)}€</span><br><span class="text-sm text-muted">letzten 30T</span>` : '<span class="text-muted">—</span>'}
+        </td>
         <td>${statusBadge(c.login_email ? 'active' : 'paused')}<br><span class="text-sm text-muted">${c.login_email || 'Kein Login'}</span></td>
-        <td><span style="font-weight:600">${c.lead_count}</span> Leads</td>
-        <td class="text-muted text-sm">${formatDate(c.created_at)}</td>
         <td>
           <div class="table-actions">
             <button class="btn btn-sm btn-secondary" onclick="editCustomer(${c.id})">Bearbeiten</button>
@@ -204,7 +217,7 @@
     `).join('');
     document.getElementById('customersTableWrap').innerHTML = `
       <table>
-        <thead><tr><th>Firma / Kontakt</th><th>E-Mail / Telefon</th><th>Branche</th><th>Portal-Login</th><th>Leads</th><th>Erstellt</th><th>Aktionen</th></tr></thead>
+        <thead><tr><th>Firma / Kontakt</th><th>E-Mail / Telefon</th><th>Branche</th><th>Kampagnen / Budget</th><th>Leads</th><th>Ausgaben (30T)</th><th>Portal-Login</th><th>Aktionen</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     `;
@@ -224,6 +237,7 @@
     document.getElementById('customerId').value = '';
     ['fCompany','fContact','fEmail','fPhone','fIndustry','fAddress','fNotes','fLoginEmail','fLoginPw'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('tabCreativesBtn').style.display = 'none';
+    document.getElementById('tabPerfBtn').style.display = 'none';
     switchTab('tabInfo');
     openModal('modalCustomer');
   }
@@ -245,10 +259,96 @@
       document.getElementById('fLoginEmail').value = c.login_email || '';
       document.getElementById('fLoginPw').value = '';
       document.getElementById('tabCreativesBtn').style.display = '';
+      document.getElementById('tabPerfBtn').style.display = '';
       switchTab('tabInfo');
+      loadCustomerPerformance(id);
       loadCustomerCreatives(id);
       openModal('modalCustomer');
     } catch(e) { showToast(e.message,'error'); }
+  }
+
+  async function loadCustomerPerformance(customerId) {
+    try {
+      const c = await API.get('/api/admin/customers/' + customerId);
+      const el = document.getElementById('customerPerfContent');
+      const m = c.metrics || {};
+      const budgetTotal = c.budgetTotal || 0;
+      const ls = c.leadStats || {};
+      const ctr = m.impressions > 0 ? ((m.clicks / m.impressions) * 100).toFixed(2) : '—';
+      const cpl = ls.total > 0 && m.spend > 0 ? (m.spend / ls.last_30_days).toFixed(2) : '—';
+
+      // Build campaigns list with sync status
+      const campsHtml = (c.campaigns || []).map(camp => {
+        const hasMeta = camp.meta_campaign_id;
+        const hasGoogle = camp.google_campaign_id;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6">
+          <div>
+            <span style="font-size:13px;font-weight:500">${camp.name}</span>
+            <span class="text-muted text-sm" style="margin-left:8px">${camp.platform || ''}</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${camp.budget_monthly ? `<span style="font-size:11px;background:#f0fdf4;color:#15803d;padding:2px 7px;border-radius:20px">💶 ${camp.budget_monthly}€/Mo</span>` : ''}
+            <span style="font-size:11px;padding:2px 7px;border-radius:20px;background:${hasMeta ? '#eff6ff' : '#f9fafb'};color:${hasMeta ? '#1d4ed8' : '#9ca3af'}">${hasMeta ? '✓ Meta' : '○ Meta'}</span>
+            <span style="font-size:11px;padding:2px 7px;border-radius:20px;background:${hasGoogle ? '#f0fdf4' : '#f9fafb'};color:${hasGoogle ? '#15803d' : '#9ca3af'}">${hasGoogle ? '✓ Google' : '○ Google'}</span>
+            <span style="font-size:11px;color:#6b7280">${camp.lead_count} Leads</span>
+          </div>
+        </div>`;
+      }).join('') || '<p class="text-muted text-sm">Keine Kampagnen</p>';
+
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+          <div style="background:#f0fdf4;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:11px;color:#6b7280;margin-bottom:2px">Budget/Mo</div>
+            <div style="font-size:18px;font-weight:700;color:#15803d">${budgetTotal > 0 ? budgetTotal + '€' : '—'}</div>
+          </div>
+          <div style="background:#eff6ff;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:11px;color:#6b7280;margin-bottom:2px">Impressionen (30T)</div>
+            <div style="font-size:18px;font-weight:700;color:#1d4ed8">${(m.impressions || 0).toLocaleString('de-DE')}</div>
+          </div>
+          <div style="background:#fdf4ff;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:11px;color:#6b7280;margin-bottom:2px">Klicks (30T)</div>
+            <div style="font-size:18px;font-weight:700;color:#7c3aed">${(m.clicks || 0).toLocaleString('de-DE')}<span style="font-size:11px;font-weight:400;margin-left:4px">CTR ${ctr}%</span></div>
+          </div>
+          <div style="background:#fff7ed;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:11px;color:#6b7280;margin-bottom:2px">Leads (30T)</div>
+            <div style="font-size:18px;font-weight:700;color:#c2410c">${ls.last_30_days || 0}<span style="font-size:11px;font-weight:400;margin-left:4px">${cpl !== '—' ? 'CPL ' + cpl + '€' : ''}</span></div>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:#374151">Kampagnen &amp; API-Verbindungen</div>
+        ${campsHtml}
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-sm btn-secondary" onclick="syncMeta(${customerId})">&#8635; Meta Sync</button>
+          <button class="btn btn-sm btn-secondary" onclick="syncGoogle(${customerId})">&#8635; Google Sync</button>
+          <a href="/admin/analytics.html" class="btn btn-sm btn-outline">&#128200; Analytics öffnen</a>
+        </div>`;
+    } catch(e) { document.getElementById('customerPerfContent').innerHTML = '<p class="text-muted text-sm">Fehler beim Laden</p>'; }
+  }
+
+  async function syncMeta(customerId) {
+    // Find campaigns for this customer and sync them
+    try {
+      const c = await API.get('/api/admin/customers/' + customerId);
+      const metaCamps = (c.campaigns || []).filter(camp => camp.meta_campaign_id);
+      if (!metaCamps.length) { showToast('Keine Meta Campaign ID hinterlegt', 'error'); return; }
+      for (const camp of metaCamps) {
+        await API.post('/api/admin/integrations/meta/sync', { campaign_id: camp.id });
+      }
+      showToast('Meta Sync abgeschlossen');
+      loadCustomerPerformance(customerId);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function syncGoogle(customerId) {
+    try {
+      const c = await API.get('/api/admin/customers/' + customerId);
+      const googCamps = (c.campaigns || []).filter(camp => camp.google_campaign_id);
+      if (!googCamps.length) { showToast('Keine Google Campaign ID hinterlegt', 'error'); return; }
+      for (const camp of googCamps) {
+        await API.post('/api/admin/integrations/google/sync', { campaign_id: camp.id });
+      }
+      showToast('Google Sync abgeschlossen');
+      loadCustomerPerformance(customerId);
+    } catch(e) { showToast(e.message, 'error'); }
   }
 
   async function loadCustomerCreatives(customerId) {
