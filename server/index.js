@@ -23,6 +23,7 @@ app.use('/api/admin/documents', require('./routes/admin/documents'));
 app.use('/api/admin/metrics', require('./routes/admin/metrics'));
 app.use('/api/admin/tasks', require('./routes/admin/tasks'));
 app.use('/api/admin/ai', require('./routes/admin/ai'));
+app.use('/api/admin/integrations', require('./routes/admin/integrations'));
 
 // Webhooks (public – no auth, optional secret)
 app.use('/api/webhooks', require('./routes/webhooks'));

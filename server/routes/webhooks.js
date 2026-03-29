@@ -99,6 +99,57 @@ router.post('/leads', (req, res) => {
   }
 });
 
+// ── POST /api/webhooks/google-conversion ─────────────────────────────────────
+// Receives Google Ads conversion events (e.g. from Google Tag Manager / offline import)
+// Body: { campaign_id, date, conversions, spend, clicks, impressions, customer_id }
+router.post('/google-conversion', (req, res) => {
+  if (!verifySecret(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const {
+      campaign_id,
+      date,
+      conversions,
+      leads_generated,
+      spend,
+      clicks,
+      impressions,
+    } = req.body;
+
+    const campId = campaign_id || req.query.campaign_id;
+    if (!campId) {
+      return res.status(400).json({ error: 'campaign_id erforderlich' });
+    }
+
+    const metricDate = date || new Date().toISOString().slice(0, 10);
+
+    db.prepare(`
+      INSERT INTO campaign_metrics (campaign_id, date, impressions, clicks, spend, leads_generated, conversions)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(campaign_id, date) DO UPDATE SET
+        impressions     = COALESCE(excluded.impressions, impressions),
+        clicks          = COALESCE(excluded.clicks, clicks),
+        spend           = COALESCE(excluded.spend, spend),
+        leads_generated = COALESCE(excluded.leads_generated, leads_generated),
+        conversions     = COALESCE(excluded.conversions, conversions)
+    `).run(
+      campId,
+      metricDate,
+      impressions || 0,
+      clicks || 0,
+      spend || 0,
+      leads_generated || conversions || 0,
+      conversions || 0
+    );
+
+    res.json({ success: true, date: metricDate });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/webhooks/leads – health check + instructions
 router.get('/leads', (req, res) => {
   const base = req.protocol + '://' + req.get('host');

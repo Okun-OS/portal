@@ -58,6 +58,14 @@
       <!-- KPI cards – hidden until campaign selected -->
       <div id="analyticsContent" style="display:none">
 
+        <!-- Refresh bar -->
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:10px">
+          <span id="lastUpdated" class="text-muted text-sm"></span>
+          <span id="liveIndicator" style="display:none;width:8px;height:8px;border-radius:50%;background:#16a34a;animation:pulse 2s infinite"></span>
+          <button class="btn btn-sm btn-secondary" onclick="loadMetrics()">&#8635; Aktualisieren</button>
+        </div>
+        <style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
+
         <!-- Metric cards -->
         <div class="metric-grid" id="metricCards"></div>
 
@@ -164,6 +172,8 @@
     });
   }
 
+  let autoRefreshTimer = null;
+
   async function loadMetrics() {
     const cid = document.getElementById('selCampaign').value;
     const days = document.getElementById('selDays').value;
@@ -171,6 +181,7 @@
     if (!cid) {
       document.getElementById('analyticsContent').style.display = 'none';
       document.getElementById('noSelection').style.display = 'block';
+      stopAutoRefresh();
       return;
     }
 
@@ -179,7 +190,24 @@
       document.getElementById('noSelection').style.display = 'none';
       document.getElementById('analyticsContent').style.display = 'block';
       renderMetrics(data);
+      const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('lastUpdated').textContent = 'Aktualisiert: ' + now;
+      document.getElementById('liveIndicator').style.display = '';
+      startAutoRefresh();
     } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  function startAutoRefresh() {
+    if (autoRefreshTimer) return; // already running
+    autoRefreshTimer = setInterval(() => {
+      const cid = document.getElementById('selCampaign').value;
+      if (cid) loadMetrics();
+    }, 60000); // refresh every 60 seconds
+  }
+
+  function stopAutoRefresh() {
+    if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+    document.getElementById('liveIndicator').style.display = 'none';
   }
 
   function renderMetrics(data) {

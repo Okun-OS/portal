@@ -477,21 +477,56 @@
     if (!campId) return;
     try {
       const camp = await API.get('/api/admin/campaigns/' + campId);
-      // Auto-fill budget from campaign
+
+      // Force-overwrite all relevant fields with campaign data
       if (camp.budget_monthly) document.getElementById('sBudget').value = camp.budget_monthly;
-      // Auto-fill platform
       if (camp.platform) {
         const plat = document.getElementById('adPlatform');
         if (plat) [...plat.options].forEach(o => { if (o.value.includes(camp.platform)) plat.value = o.value; });
+        const optPlat = document.getElementById('optPlatform');
+        if (optPlat) [...optPlat.options].forEach(o => { if (o.value.includes(camp.platform)) optPlat.value = o.value; });
       }
-      // Save to context
+      if (camp.target_audience) {
+        const adTarget = document.getElementById('adTarget');
+        if (adTarget) adTarget.value = camp.target_audience;
+        const fTarget = document.getElementById('fTarget');
+        if (fTarget) fTarget.value = camp.target_audience;
+      }
+      if (camp.name) {
+        const optCamp = document.getElementById('optCampName');
+        if (optCamp) optCamp.value = camp.name;
+      }
+
+      // Auto-load 30-day metrics into optimize form
+      try {
+        const metrics = await API.get('/api/admin/metrics?campaign_id=' + campId + '&days=30');
+        if (metrics && metrics.totals) {
+          const t = metrics.totals;
+          document.getElementById('optImpressions').value = t.impressions || '';
+          document.getElementById('optClicks').value = t.clicks || '';
+          document.getElementById('optLeads').value = t.leads_generated || '';
+          document.getElementById('optSpend').value = t.spend ? parseFloat(t.spend).toFixed(2) : '';
+          if (camp.budget_monthly) document.getElementById('optBudget').value = camp.budget_monthly;
+          const optHint = document.getElementById('optAutoHint');
+          if (optHint && (t.impressions || t.clicks)) {
+            optHint.textContent = '✓ Metriken auto-geladen (30 Tage)';
+            optHint.classList.add('visible');
+          }
+        }
+      } catch { /* no metrics yet – ignore */ }
+
+      // Save full context
       saveContext({
         budget: camp.budget_monthly,
         platform: camp.platform,
+        zielgruppe: camp.target_audience || window.campaignContext.zielgruppe,
+        targetAudience: camp.target_audience || window.campaignContext.targetAudience,
         campaignName: camp.name,
-        campaignId: camp.id
+        campaignId: camp.id,
+        meta_campaign_id: camp.meta_campaign_id,
+        google_campaign_id: camp.google_campaign_id,
       });
-      showToast('Kampagnendaten geladen: ' + camp.name);
+      showToast('✓ Kampagnendaten geladen: ' + camp.name);
     } catch(e) { /* silent */ }
   }
 
