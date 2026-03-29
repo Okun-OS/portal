@@ -6,17 +6,38 @@
   <title>Admin – KI-Tools</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    .tool-tabs { display: flex; border-bottom: 2px solid var(--gray-200); margin-bottom: 20px; gap: 0; }
-    .tool-tab { padding: 12px 20px; cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--gray-500); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
-    .tool-tab:hover { color: var(--gray-800); }
-    .tool-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .tool-section { display: none; }
-    .tool-section.active { display: block; }
-    .creative-item { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
-    .creative-item .ci-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .creative-item .ci-content { font-size: 13px; color: var(--gray-700); white-space: pre-wrap; line-height: 1.6; }
-    .history-item { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; }
-    .history-item:hover { background: var(--gray-50); }
+    .flow-steps { display:flex; align-items:center; gap:0; margin-bottom:20px; background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); padding:12px 20px; }
+    .flow-step { display:flex; align-items:center; gap:8px; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:500; color:var(--gray-500); cursor:pointer; transition:all 0.15s; }
+    .flow-step.active { background:var(--primary); color:#fff; }
+    .flow-step.done { color:var(--success,#16a34a); }
+    .flow-step-num { width:22px; height:22px; border-radius:50%; background:var(--gray-200); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+    .flow-step.active .flow-step-num { background:rgba(255,255,255,0.3); color:#fff; }
+    .flow-step.done .flow-step-num { background:#dcfce7; color:#16a34a; }
+    .flow-arrow { color:var(--gray-300); font-size:16px; margin:0 4px; }
+    .tool-section { display:none; }
+    .tool-section.active { display:block; }
+    .next-steps-panel { background:linear-gradient(135deg,#f0fdf4,#dcfce7); border:1.5px solid #86efac; border-radius:var(--radius); padding:20px; margin-top:16px; }
+    .next-steps-panel h3 { margin:0 0 12px; font-size:15px; color:#15803d; }
+    .next-steps-btns { display:flex; gap:10px; flex-wrap:wrap; }
+    .next-step-btn { background:#fff; border:1.5px solid #86efac; border-radius:8px; padding:10px 18px; cursor:pointer; font-size:13px; font-weight:600; color:#15803d; transition:all 0.15s; display:flex; align-items:center; gap:8px; }
+    .next-step-btn:hover { background:#f0fdf4; border-color:#4ade80; }
+    .context-badge { background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:6px 12px; font-size:12px; color:#15803d; display:inline-flex; align-items:center; gap:6px; }
+    .campaign-complete-btn { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; border-radius:8px; padding:10px 20px; cursor:pointer; font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px; transition:opacity 0.15s; }
+    .campaign-complete-btn:hover { opacity:0.9; }
+    .complete-result-section { display:none; }
+    .complete-result-section.active { display:block; }
+    .result-tabs { display:flex; gap:0; border-bottom:2px solid var(--gray-200); margin-bottom:16px; }
+    .result-tab { padding:10px 18px; cursor:pointer; font-size:13px; font-weight:500; color:var(--gray-500); border-bottom:2px solid transparent; margin-bottom:-2px; }
+    .result-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+    .result-pane { display:none; }
+    .result-pane.active { display:block; }
+    .creative-item { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); padding:14px; margin-bottom:10px; }
+    .creative-item .ci-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+    .creative-item .ci-content { font-size:13px; color:var(--gray-700); white-space:pre-wrap; line-height:1.6; }
+    .history-item { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); padding:12px; margin-bottom:8px; cursor:pointer; }
+    .history-item:hover { background:var(--gray-50); }
+    .autofill-hint { font-size:11px; color:#15803d; margin-top:4px; display:none; }
+    .autofill-hint.visible { display:block; }
   </style>
 </head>
 <body>
@@ -47,7 +68,7 @@
   <main class="main-content">
     <div class="page-header">
       <h1 class="page-title">&#129504; KI-Analyse & Studio</h1>
-      <span class="text-muted text-sm">Intern – nicht für Kunden sichtbar</span>
+      <button class="campaign-complete-btn" onclick="runCompleteCampaign()">&#9889; Komplette Kampagne erstellen</button>
     </div>
     <div class="page-body">
 
@@ -62,32 +83,46 @@
             <select id="aiCampaign" class="form-control" style="width:220px">
               <option value="">-- Kampagne (optional) --</option>
             </select>
+            <span id="contextBadge" class="context-badge" style="display:none">&#9989; Analyse-Kontext aktiv</span>
           </div>
         </div>
       </div>
 
-      <!-- Tool Tabs -->
-      <div class="tool-tabs">
-        <div class="tool-tab active" onclick="switchTool('strategy')">&#128269; Strategie-Analyse</div>
-        <div class="tool-tab" onclick="switchTool('adcopy')">&#9997; Anzeigen-Studio</div>
-        <div class="tool-tab" onclick="switchTool('funnel')">&#127915; Funnel-Konzept</div>
-        <div class="tool-tab" onclick="switchTool('optimize')">&#128200; KI-Optimierung</div>
-        <div class="tool-tab" onclick="switchTool('creatives')">&#128218; Creatives</div>
-        <div class="tool-tab" onclick="switchTool('history')">&#128337; Verlauf</div>
+      <!-- Flow Progress Steps -->
+      <div class="flow-steps">
+        <div class="flow-step active" id="step-strategy" onclick="switchTool('strategy')">
+          <div class="flow-step-num">1</div> Strategie-Analyse
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step" id="step-adcopy" onclick="switchTool('adcopy')">
+          <div class="flow-step-num">2</div> Anzeigen-Studio
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step" id="step-funnel" onclick="switchTool('funnel')">
+          <div class="flow-step-num">3</div> Funnel-Konzept
+        </div>
+        <div class="flow-arrow">›</div>
+        <div class="flow-step" id="step-optimize" onclick="switchTool('optimize')">
+          <div class="flow-step-num">4</div> KI-Optimierung
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <div class="flow-step" id="step-creatives" onclick="switchTool('creatives')" style="font-size:12px">&#128218; Creatives</div>
+          <div class="flow-step" id="step-history" onclick="switchTool('history')" style="font-size:12px">&#128337; Verlauf</div>
+        </div>
       </div>
 
       <!-- === STRATEGY === -->
       <div id="tool-strategy" class="tool-section active">
         <div class="ai-workspace">
           <div class="card">
-            <div class="card-header"><span class="card-title">Analyse-Input</span></div>
+            <div class="card-header"><span class="card-title">&#128269; Analyse-Input</span><span class="text-sm text-muted">Website wird automatisch analysiert</span></div>
             <div class="card-body">
               <div class="form-group">
                 <label class="form-label">Angebot / Dienstleistung</label>
-                <textarea id="sOffer" class="form-control" rows="3" placeholder="Was verkauft der Kunde? Z.B. Immobilienbewertung, Solaranlage Montage..."></textarea>
+                <textarea id="sOffer" class="form-control" rows="3" placeholder="Was verkauft der Kunde? Z.B. Immobilienbewertung, Solaranlage..."></textarea>
               </div>
               <div class="form-group">
-                <label class="form-label">Website-URL</label>
+                <label class="form-label">Website-URL <span style="font-size:11px;color:var(--gray-400)">(wird automatisch analysiert)</span></label>
                 <input type="text" id="sWebsite" class="form-control" placeholder="https://...">
               </div>
               <div class="form-group">
@@ -96,18 +131,27 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Bisherige Erfahrungen / Kontext</label>
-                <textarea id="sNotes" class="form-control" rows="3" placeholder="Was hat bisher gut/schlecht funktioniert?"></textarea>
+                <textarea id="sNotes" class="form-control" rows="2" placeholder="Was hat bisher gut/schlecht funktioniert? (optional)"></textarea>
               </div>
-              <button class="btn btn-primary w-full" id="btnStrategy" onclick="runStrategy()">&#129504; Analyse starten</button>
+              <button class="btn btn-primary w-full" id="btnStrategy" onclick="runStrategy()">&#129504; Tiefe Strategie-Analyse starten</button>
             </div>
           </div>
           <div class="card">
             <div class="card-header">
               <span class="card-title">KI-Analyse</span>
-              <button class="btn btn-sm btn-secondary" id="btnSaveCreativeS" style="display:none" onclick="copyResult('strategyResult')">&#128203; Kopieren</button>
+              <button class="btn btn-sm btn-secondary" id="btnCopyStrategy" style="display:none" onclick="copyResult('strategyResult')">&#128203; Kopieren</button>
             </div>
             <div class="card-body" id="strategyResult">
-              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#129504;</div><p>Fülle das Formular aus und starte die Analyse.</p></div>
+              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#129504;</div><p>Fülle das Formular aus — die KI erstellt eine vollständige Strategie-Analyse inkl. Website-Check.</p></div>
+            </div>
+            <div id="nextStepsPanel" class="next-steps-panel" style="display:none;margin:0 16px 16px">
+              <h3>&#9889; Was möchtest du als nächstes erstellen?</h3>
+              <div class="next-steps-btns">
+                <button class="next-step-btn" onclick="goToModule('adcopy')">&#9997; Anzeigen erstellen</button>
+                <button class="next-step-btn" onclick="goToModule('funnel')">&#127915; Funnel erstellen</button>
+                <button class="next-step-btn" onclick="goToModule('optimize')">&#128200; Optimierung starten</button>
+                <button class="next-step-btn" onclick="runCompleteCampaign()" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);border-color:#a78bfa;color:#6d28d9">&#9889; Alles auf einmal</button>
+              </div>
             </div>
           </div>
         </div>
@@ -117,7 +161,7 @@
       <div id="tool-adcopy" class="tool-section">
         <div class="ai-workspace">
           <div class="card">
-            <div class="card-header"><span class="card-title">Anzeigen-Parameter</span></div>
+            <div class="card-header"><span class="card-title">&#9997; Anzeigen-Parameter</span><span id="adAutoHint" class="autofill-hint">&#9989; Aus Analyse vorausgefüllt</span></div>
             <div class="card-body">
               <div class="form-group">
                 <label class="form-label">Branche / Angebot</label>
@@ -126,6 +170,10 @@
               <div class="form-group">
                 <label class="form-label">Zielgruppe</label>
                 <input type="text" id="adTarget" class="form-control" placeholder="Hausbesitzer 45+, verkaufsbereit">
+              </div>
+              <div class="form-group">
+                <label class="form-label">USP / Alleinstellungsmerkmal</label>
+                <textarea id="adOffer" class="form-control" rows="2" placeholder="Was macht das Angebot einzigartig?"></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label">Plattform</label>
@@ -145,11 +193,7 @@
                   <option value="energetisch, motivierend">Energetisch</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label class="form-label">Zusatzinfos / USP</label>
-                <textarea id="adOffer" class="form-control" rows="3" placeholder="Was macht das Angebot einzigartig?"></textarea>
-              </div>
-              <button class="btn btn-primary w-full" id="btnAdCopy" onclick="runAdCopy()">&#9997; Texte generieren</button>
+              <button class="btn btn-primary w-full" id="btnAdCopy" onclick="runAdCopy()">&#9997; Basierend auf Analyse generieren</button>
             </div>
           </div>
           <div class="card">
@@ -161,7 +205,7 @@
               </div>
             </div>
             <div class="card-body" id="adCopyResult">
-              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#9997;</div><p>Fülle die Parameter aus und generiere Anzeigentexte.</p></div>
+              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#9997;</div><p>Starte zuerst die Strategie-Analyse — die KI nutzt dann automatisch deine Daten.</p></div>
             </div>
           </div>
         </div>
@@ -171,7 +215,7 @@
       <div id="tool-funnel" class="tool-section">
         <div class="ai-workspace">
           <div class="card">
-            <div class="card-header"><span class="card-title">Funnel-Parameter</span></div>
+            <div class="card-header"><span class="card-title">&#127915; Funnel-Parameter</span><span id="funnelAutoHint" class="autofill-hint">&#9989; Aus Analyse vorausgefüllt</span></div>
             <div class="card-body">
               <div class="form-group">
                 <label class="form-label">Branche</label>
@@ -179,13 +223,13 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Angebot (was bekommt der Lead?)</label>
-                <textarea id="fOffer" class="form-control" rows="3" placeholder="Kostenlose Immobilienbewertung, Kostenloses Erstgespräch..."></textarea>
+                <textarea id="fOffer" class="form-control" rows="3" placeholder="Kostenlose Immobilienbewertung..."></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label">Zielgruppe</label>
                 <input type="text" id="fTarget" class="form-control" placeholder="Wer soll die Page sehen?">
               </div>
-              <button class="btn btn-primary w-full" id="btnFunnel" onclick="runFunnel()">&#127915; Konzept generieren</button>
+              <button class="btn btn-primary w-full" id="btnFunnel" onclick="runFunnel()">&#127915; Basierend auf Analyse generieren</button>
             </div>
           </div>
           <div class="card">
@@ -194,7 +238,7 @@
               <button class="btn btn-sm btn-secondary" id="btnCopyFunnel" style="display:none" onclick="copyResult('funnelResult')">&#128203; Kopieren</button>
             </div>
             <div class="card-body" id="funnelResult">
-              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#127915;</div><p>Generiere ein Landingpage-Konzept für deinen Kunden.</p></div>
+              <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#127915;</div><p>Starte zuerst die Strategie-Analyse für optimale Funnel-Konzepte.</p></div>
             </div>
           </div>
         </div>
@@ -204,9 +248,9 @@
       <div id="tool-optimize" class="tool-section">
         <div class="ai-workspace">
           <div class="card">
-            <div class="card-header"><span class="card-title">Kampagnen-Metriken</span></div>
+            <div class="card-header"><span class="card-title">&#128200; Kampagnen-Metriken</span><span id="optAutoHint" class="autofill-hint">&#9989; Kontext aus Analyse aktiv</span></div>
             <div class="card-body">
-              <div class="alert alert-info">&#128202; Trage aktuelle Metriken ein – die KI generiert daraus konkrete Optimierungs-Tasks.</div>
+              <div class="alert alert-info">&#128202; Metriken eintragen — die KI nutzt automatisch den Analyse-Kontext für präzisere Tasks.</div>
               <div class="form-group">
                 <label class="form-label">Kampagnenname</label>
                 <input type="text" id="optCampName" class="form-control" placeholder="z.B. FB Lead Ads Winter">
@@ -218,41 +262,44 @@
                 </select>
               </div>
               <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Impressionen</label>
-                  <input type="number" id="optImpressions" class="form-control" placeholder="0">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Klicks</label>
-                  <input type="number" id="optClicks" class="form-control" placeholder="0">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Leads</label>
-                  <input type="number" id="optLeads" class="form-control" placeholder="0">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Ausgaben (€)</label>
-                  <input type="number" id="optSpend" class="form-control" placeholder="0">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Budget/Monat (€)</label>
-                  <input type="number" id="optBudget" class="form-control" placeholder="0">
-                </div>
+                <div class="form-group"><label class="form-label">Impressionen</label><input type="number" id="optImpressions" class="form-control" placeholder="0"></div>
+                <div class="form-group"><label class="form-label">Klicks</label><input type="number" id="optClicks" class="form-control" placeholder="0"></div>
+                <div class="form-group"><label class="form-label">Leads</label><input type="number" id="optLeads" class="form-control" placeholder="0"></div>
+                <div class="form-group"><label class="form-label">Ausgaben (€)</label><input type="number" id="optSpend" class="form-control" placeholder="0"></div>
+                <div class="form-group"><label class="form-label">Budget/Monat (€)</label><input type="number" id="optBudget" class="form-control" placeholder="0"></div>
               </div>
               <div class="form-group">
                 <label class="form-label">Zusätzlicher Kontext</label>
                 <textarea id="optNotes" class="form-control" rows="2" placeholder="Was fällt auf? Welche Probleme gibt es?"></textarea>
               </div>
-              <button class="btn btn-primary w-full" id="btnOptimize" onclick="runOptimize()">&#128200; Tasks generieren</button>
+              <button class="btn btn-primary w-full" id="btnOptimize" onclick="runOptimize()">&#128200; Basierend auf Analyse optimieren</button>
             </div>
           </div>
           <div class="card">
-            <div class="card-header">
-              <span class="card-title">KI-Optimierungsvorschläge</span>
-            </div>
+            <div class="card-header"><span class="card-title">KI-Optimierungsvorschläge</span></div>
             <div class="card-body" id="optimizeResult">
               <div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#128200;</div><p>Die KI analysiert deine Metriken und erstellt konkrete Tasks.</p></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === COMPLETE CAMPAIGN RESULT === -->
+      <div id="tool-complete" class="tool-section">
+        <div class="card mb-4">
+          <div class="card-header">
+            <span class="card-title">&#9889; Komplette Kampagne</span>
+            <button class="btn btn-sm btn-secondary" onclick="switchTool('strategy')">&#8592; Zurück</button>
+          </div>
+          <div class="card-body">
+            <div class="result-tabs">
+              <div class="result-tab active" onclick="switchResultTab('resStrategy')">&#128269; Strategie</div>
+              <div class="result-tab" onclick="switchResultTab('resAds')">&#9997; Anzeigen</div>
+              <div class="result-tab" onclick="switchResultTab('resFunnel')">&#127915; Funnel</div>
+            </div>
+            <div id="resStrategy" class="result-pane active"></div>
+            <div id="resAds" class="result-pane"></div>
+            <div id="resFunnel" class="result-pane"></div>
           </div>
         </div>
       </div>
@@ -300,27 +347,17 @@
       <div class="form-group">
         <label class="form-label">Typ</label>
         <select id="crType" class="form-control">
-          <option value="hook">Hook (erster Satz)</option>
-          <option value="headline">Headline</option>
-          <option value="body">Anzeigentext (Body)</option>
-          <option value="cta">Call-to-Action</option>
+          <option value="hook">Hook</option><option value="headline">Headline</option>
+          <option value="body">Anzeigentext</option><option value="cta">CTA</option>
           <option value="landing_page">Landingpage-Konzept</option>
         </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Titel / Kurzbeschreibung</label>
-        <input type="text" id="crTitle" class="form-control" placeholder="z.B. Hook Variante A – Immobilien">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Inhalt</label>
-        <textarea id="crContent" class="form-control" rows="6"></textarea>
-      </div>
+      <div class="form-group"><label class="form-label">Titel</label><input type="text" id="crTitle" class="form-control"></div>
+      <div class="form-group"><label class="form-label">Inhalt</label><textarea id="crContent" class="form-control" rows="6"></textarea></div>
       <div class="form-group">
         <label class="form-label">Status</label>
         <select id="crStatus" class="form-control">
-          <option value="draft">Entwurf</option>
-          <option value="active">Aktiv</option>
-          <option value="archived">Archiviert</option>
+          <option value="draft">Entwurf</option><option value="active">Aktiv</option><option value="archived">Archiviert</option>
         </select>
       </div>
     </div>
@@ -349,19 +386,67 @@
   requireAuth('admin');
   initNav('ai');
 
-  let currentAdResult = '';
+  // ── Central campaignContext ──────────────────────────────────────────────
+  window.campaignContext = JSON.parse(sessionStorage.getItem('campaignContext') || 'null') || {};
 
+  function saveContext(ctx) {
+    window.campaignContext = Object.assign(window.campaignContext, ctx);
+    sessionStorage.setItem('campaignContext', JSON.stringify(window.campaignContext));
+    updateContextBadge();
+  }
+
+  function updateContextBadge() {
+    const badge = document.getElementById('contextBadge');
+    const has = window.campaignContext && window.campaignContext.angebot;
+    badge.style.display = has ? 'inline-flex' : 'none';
+    if (has) {
+      badge.title = 'Angebot: ' + window.campaignContext.angebot;
+      // mark step 1 done
+      document.getElementById('step-strategy').classList.add('done');
+    }
+  }
+
+  function fillFromContext() {
+    const ctx = window.campaignContext;
+    if (!ctx || !ctx.angebot) return;
+
+    // Ad copy
+    if (document.getElementById('adIndustry').value === '') {
+      document.getElementById('adIndustry').value = (ctx.branche || '') + (ctx.region ? ', ' + ctx.region : '');
+      document.getElementById('adTarget').value = ctx.targetAudience || ctx.zielgruppe || '';
+      document.getElementById('adOffer').value = ctx.usp || '';
+      const hint = document.getElementById('adAutoHint');
+      if (hint) { hint.classList.add('visible'); }
+    }
+
+    // Funnel
+    if (document.getElementById('fIndustry2').value === '') {
+      document.getElementById('fIndustry2').value = ctx.branche || '';
+      document.getElementById('fOffer').value = ctx.angebot || '';
+      document.getElementById('fTarget').value = ctx.targetAudience || ctx.zielgruppe || '';
+      const hint = document.getElementById('funnelAutoHint');
+      if (hint) { hint.classList.add('visible'); }
+    }
+
+    // Optimize hint
+    const optHint = document.getElementById('optAutoHint');
+    if (optHint) optHint.classList.add('visible');
+  }
+
+  let currentAdResult = '';
   const typeLabels = { strategy: '&#128269; Strategie', ad_copy: '&#9997; Anzeigentext', funnel: '&#127915; Funnel', optimization: '&#128200; Optimierung', explain: '&#128172; Erklärung' };
 
   async function init() {
     const customers = await API.get('/api/admin/customers');
-    ['aiCustomer'].forEach(id => {
-      customers.forEach(c => {
-        const o = document.createElement('option');
-        o.value = c.id; o.textContent = c.company_name + ' – ' + c.contact_name;
-        document.getElementById(id).appendChild(o);
-      });
+    customers.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.company_name + ' – ' + c.contact_name;
+      document.getElementById('aiCustomer').appendChild(o);
     });
+    updateContextBadge();
+    if (window.campaignContext && window.campaignContext.angebot) {
+      document.getElementById('nextStepsPanel').style.display = 'block';
+    }
   }
 
   async function loadCampaignsForAI() {
@@ -378,20 +463,31 @@
   }
 
   function switchTool(name) {
-    document.querySelectorAll('.tool-tab').forEach((t, i) => {
-      const names = ['strategy','adcopy','funnel','optimize','creatives','history'];
-      t.classList.toggle('active', names[i] === name);
-    });
+    const allSteps = ['strategy','adcopy','funnel','optimize','creatives','history','complete'];
     document.querySelectorAll('.tool-section').forEach(s => s.classList.remove('active'));
     document.getElementById('tool-' + name).classList.add('active');
+    // Update flow steps highlight
+    ['strategy','adcopy','funnel','optimize','creatives','history'].forEach(n => {
+      const el = document.getElementById('step-' + n);
+      if (el) el.classList.toggle('active', n === name);
+    });
+    if (name === 'adcopy' || name === 'funnel' || name === 'optimize') fillFromContext();
     if (name === 'creatives') loadCreatives();
     if (name === 'history') loadHistory();
   }
 
-  function getCustomerContext() {
-    const cid = document.getElementById('aiCustomer').value;
-    const customers = window._customers || [];
-    return cid;
+  function goToModule(name) {
+    switchTool(name);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function switchResultTab(id) {
+    document.querySelectorAll('.result-tab').forEach((t, i) => {
+      const ids = ['resStrategy','resAds','resFunnel'];
+      t.classList.toggle('active', ids[i] === id);
+    });
+    document.querySelectorAll('.result-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
   }
 
   function setGenerating(resultId, btnId) {
@@ -399,13 +495,11 @@
       <div class="ai-generating">
         <div class="ai-dot-pulse"><span></span><span></span><span></span></div>
         KI analysiert gerade...
-      </div>
-    `;
+      </div>`;
     if (btnId) document.getElementById(btnId).disabled = true;
   }
 
   function renderMarkdown(text) {
-    // Simple markdown render
     return text
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
@@ -421,11 +515,11 @@
   async function runStrategy() {
     const cid = document.getElementById('aiCustomer').value;
     setGenerating('strategyResult', 'btnStrategy');
-    document.getElementById('btnSaveCreativeS').style.display = 'none';
+    document.getElementById('btnCopyStrategy').style.display = 'none';
+    document.getElementById('nextStepsPanel').style.display = 'none';
     try {
       const context = {
         company: cid ? '' : 'Unbekannt',
-        industry: '',
         offer: document.getElementById('sOffer').value,
         website: document.getElementById('sWebsite').value,
         region: document.getElementById('sRegion').value,
@@ -433,7 +527,16 @@
       };
       const res = await API.post('/api/admin/ai/strategy', { customer_id: cid || null, context });
       document.getElementById('strategyResult').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.result)}</div>`;
-      document.getElementById('btnSaveCreativeS').style.display = '';
+      document.getElementById('btnCopyStrategy').style.display = '';
+      // Save campaignContext
+      if (res.campaignContext) {
+        saveContext(res.campaignContext);
+        // Reset other tabs so they refill from new context
+        document.getElementById('adIndustry').value = '';
+        document.getElementById('fIndustry2').value = '';
+      }
+      document.getElementById('nextStepsPanel').style.display = 'block';
+      document.getElementById('step-strategy').classList.add('done');
     } catch(e) {
       document.getElementById('strategyResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
     } finally { document.getElementById('btnStrategy').disabled = false; }
@@ -445,10 +548,12 @@
     document.getElementById('btnCopyAd').style.display = 'none';
     document.getElementById('btnSaveAd').style.display = 'none';
     try {
+      const ctx = window.campaignContext || {};
       const context = {
-        industry: document.getElementById('adIndustry').value,
-        offer: document.getElementById('adOffer').value,
-        targetAudience: document.getElementById('adTarget').value,
+        ...ctx,
+        branche: document.getElementById('adIndustry').value || ctx.branche,
+        targetAudience: document.getElementById('adTarget').value || ctx.targetAudience || ctx.zielgruppe,
+        usp: document.getElementById('adOffer').value || ctx.usp,
         platform: document.getElementById('adPlatform').value,
         tone: document.getElementById('adTone').value,
       };
@@ -461,6 +566,7 @@
       document.getElementById('adCopyResult').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.result)}</div>`;
       document.getElementById('btnCopyAd').style.display = '';
       document.getElementById('btnSaveAd').style.display = '';
+      document.getElementById('step-adcopy').classList.add('done');
     } catch(e) {
       document.getElementById('adCopyResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
     } finally { document.getElementById('btnAdCopy').disabled = false; }
@@ -471,10 +577,12 @@
     setGenerating('funnelResult', 'btnFunnel');
     document.getElementById('btnCopyFunnel').style.display = 'none';
     try {
+      const ctx = window.campaignContext || {};
       const context = {
-        industry: document.getElementById('fIndustry2').value,
-        offer: document.getElementById('fOffer').value,
-        targetAudience: document.getElementById('fTarget').value,
+        ...ctx,
+        branche: document.getElementById('fIndustry2').value || ctx.branche,
+        angebot: document.getElementById('fOffer').value || ctx.angebot,
+        targetAudience: document.getElementById('fTarget').value || ctx.targetAudience || ctx.zielgruppe,
       };
       const res = await API.post('/api/admin/ai/funnel', {
         customer_id: cid || null,
@@ -483,6 +591,7 @@
       });
       document.getElementById('funnelResult').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.result)}</div>`;
       document.getElementById('btnCopyFunnel').style.display = '';
+      document.getElementById('step-funnel').classList.add('done');
     } catch(e) {
       document.getElementById('funnelResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
     } finally { document.getElementById('btnFunnel').disabled = false; }
@@ -496,13 +605,12 @@
     const spend = parseFloat(document.getElementById('optSpend').value) || 0;
     setGenerating('optimizeResult', 'btnOptimize');
     try {
+      const ctx = window.campaignContext || {};
       const context = {
+        ...ctx,
         campaignName: document.getElementById('optCampName').value,
         platform: document.getElementById('optPlatform').value,
-        impressions,
-        clicks,
-        leads,
-        spend,
+        impressions, clicks, leads, spend,
         budget: document.getElementById('optBudget').value,
         notes: document.getElementById('optNotes').value,
         ctr: impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : 0,
@@ -516,9 +624,7 @@
       });
       const data = res.result;
       let html = '';
-      if (data.summary) {
-        html += `<div class="alert alert-info" style="margin-bottom:16px">${data.summary}</div>`;
-      }
+      if (data.summary) html += `<div class="alert alert-info" style="margin-bottom:16px">${data.summary}</div>`;
       if (data.tasks && data.tasks.length) {
         html += '<div style="display:flex;flex-direction:column;gap:8px">' +
           data.tasks.map(t => `
@@ -529,16 +635,45 @@
                 <span class="badge badge-ai" style="margin-left:6px;font-size:10px">${t.category || 'KI'}</span>
               </div>
               ${t.description ? `<div class="task-desc">${t.description}</div>` : ''}
-            </div>
-          `).join('') + '</div>';
-        html += `<div style="margin-top:12px"><button class="btn btn-success" onclick="showToast('${data.tasks.length} Tasks wurden automatisch gespeichert!')">&#9989; Tasks wurden gespeichert</button></div>`;
-      } else {
-        html = '<p class="text-muted">Keine Tasks generiert.</p>';
-      }
+            </div>`).join('') + '</div>';
+        html += `<div style="margin-top:12px"><button class="btn btn-success" onclick="showToast('${data.tasks.length} Tasks wurden automatisch gespeichert!')">&#9989; Tasks gespeichert</button></div>`;
+      } else { html = '<p class="text-muted">Keine Tasks generiert.</p>'; }
       document.getElementById('optimizeResult').innerHTML = html;
+      document.getElementById('step-optimize').classList.add('done');
     } catch(e) {
       document.getElementById('optimizeResult').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
     } finally { document.getElementById('btnOptimize').disabled = false; }
+  }
+
+  async function runCompleteCampaign() {
+    const cid = document.getElementById('aiCustomer').value;
+    const offer = document.getElementById('sOffer').value || (window.campaignContext && window.campaignContext.angebot) || '';
+    if (!offer) { showToast('Bitte zuerst das Angebot im Strategie-Tab eingeben.', 'error'); switchTool('strategy'); return; }
+    switchTool('complete');
+    document.getElementById('resStrategy').innerHTML = '<div class="ai-generating"><div class="ai-dot-pulse"><span></span><span></span><span></span></div>Erstelle komplette Kampagne... (dauert ca. 30–60 Sek.)</div>';
+    document.getElementById('resAds').innerHTML = '';
+    document.getElementById('resFunnel').innerHTML = '';
+    try {
+      const context = {
+        ...(window.campaignContext || {}),
+        offer: offer,
+        website: document.getElementById('sWebsite').value,
+        region: document.getElementById('sRegion').value,
+        notes: document.getElementById('sNotes').value,
+      };
+      const res = await API.post('/api/admin/ai/complete-campaign', {
+        customer_id: cid || null,
+        campaign_id: document.getElementById('aiCampaign').value || null,
+        context
+      });
+      document.getElementById('resStrategy').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.strategy)}</div>`;
+      document.getElementById('resAds').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.adCopy)}</div>`;
+      document.getElementById('resFunnel').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.funnel)}</div>`;
+      if (res.campaignContext) saveContext(res.campaignContext);
+      showToast('Komplette Kampagne erstellt!');
+    } catch(e) {
+      document.getElementById('resStrategy').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    }
   }
 
   async function saveCreatives() {
@@ -551,8 +686,7 @@
         type: 'body',
         title: 'KI-Anzeigentext – ' + new Date().toLocaleDateString('de-DE'),
         content: currentAdResult,
-        source: 'ai',
-        status: 'draft'
+        source: 'ai', status: 'draft'
       });
       showToast('Creative gespeichert');
     } catch(e) { showToast(e.message, 'error'); }
@@ -584,7 +718,7 @@
     try {
       const rows = await API.get(url);
       if (!rows.length) {
-        document.getElementById('creativesContent').innerHTML = `<div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#128218;</div><h3>Noch keine Creatives</h3><p>Generiere Anzeigentexte oder füge manuell hinzu.</p></div>`;
+        document.getElementById('creativesContent').innerHTML = `<div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#128218;</div><h3>Noch keine Creatives</h3></div>`;
         return;
       }
       const typeMap = { hook: 'Hook', headline: 'Headline', body: 'Anzeigentext', cta: 'CTA', landing_page: 'Landingpage' };
@@ -596,75 +730,57 @@
                 <span class="badge badge-sent" style="font-size:11px">${typeMap[c.type] || c.type}</span>
                 ${c.source === 'ai' ? '<span class="badge badge-ai" style="font-size:10px;margin-left:4px">KI</span>' : ''}
                 <strong style="margin-left:8px;font-size:13px">${c.title}</strong>
-                <span class="text-sm text-muted" style="margin-left:8px">${c.company_name || ''}</span>
               </div>
-              <div style="display:flex;gap:4px;align-items:center">
-                ${statusBadge(c.status)}
-                <select class="form-control" style="width:100px;padding:3px 6px;font-size:11px" onchange="updateCreativeStatus(${c.id},this.value)">
-                  <option value="draft" ${c.status==='draft'?'selected':''}>Entwurf</option>
-                  <option value="active" ${c.status==='active'?'selected':''}>Aktiv</option>
-                  <option value="archived" ${c.status==='archived'?'selected':''}>Archiv</option>
-                </select>
-                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCreative(${c.id})">&#215;</button>
-              </div>
+              <button class="btn btn-sm btn-danger" onclick="deleteCreative(${c.id})">&#128465;</button>
             </div>
             <div class="ci-content">${c.content.slice(0, 300)}${c.content.length > 300 ? '...' : ''}</div>
-            <div class="text-sm text-muted" style="margin-top:6px">${formatDate(c.created_at)}</div>
-          </div>
-        `).join('') + '</div>';
-    } catch(e) { showToast(e.message,'error'); }
-  }
-
-  async function updateCreativeStatus(id, status) {
-    try { await API.put('/api/admin/ai/creatives/' + id, { status }); showToast('Status aktualisiert'); } catch(e) { showToast(e.message,'error'); }
+          </div>`).join('') + '</div>';
+    } catch(e) { document.getElementById('creativesContent').innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
   }
 
   async function deleteCreative(id) {
-    if (!confirm('Creative löschen?')) return;
-    try { await API.del('/api/admin/ai/creatives/' + id); showToast('Gelöscht'); loadCreatives(); } catch(e) { showToast(e.message,'error'); }
+    if (!confirm('Löschen?')) return;
+    await API.delete('/api/admin/ai/creatives/' + id);
+    loadCreatives();
   }
 
   async function loadHistory() {
     const type = document.getElementById('historyFilter').value;
     const cid = document.getElementById('aiCustomer').value;
     let url = '/api/admin/ai/history';
-    const p = [];
-    if (cid) p.push('customer_id=' + cid);
-    if (type) p.push('type=' + type);
-    if (p.length) url += '?' + p.join('&');
+    const params = [];
+    if (cid) params.push('customer_id=' + cid);
+    if (type) params.push('type=' + type);
+    if (params.length) url += '?' + params.join('&');
     try {
       const rows = await API.get(url);
       if (!rows.length) {
-        document.getElementById('historyContent').innerHTML = '<p class="text-muted">Noch keine Analysen gespeichert.</p>';
+        document.getElementById('historyContent').innerHTML = '<p class="text-muted">Kein Verlauf vorhanden.</p>';
         return;
       }
       document.getElementById('historyContent').innerHTML = rows.map(r => `
         <div class="history-item" onclick="showHistoryDetail(${r.id})">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <span style="font-size:12px;font-weight:600">${(typeLabels[r.type]||r.type)}</span>
-            <span class="text-sm text-muted">${formatDateTime(r.created_at)}</span>
+            <span>${typeLabels[r.type] || r.type}</span>
+            <span class="text-sm text-muted">${r.created_at ? r.created_at.slice(0,16) : ''} – ${r.created_by}</span>
           </div>
-          <div style="font-size:13px;color:var(--gray-700)">${r.company_name ? r.company_name + (r.campaign_name ? ' / ' + r.campaign_name : '') : 'Kein Kunde'}</div>
-          <div class="text-sm text-muted" style="margin-top:4px">${(r.result_preview || '').replace(/<[^>]+>/g,'').slice(0,120)}...</div>
-        </div>
-      `).join('');
-    } catch(e) { showToast(e.message,'error'); }
+          <div class="text-sm text-muted">${r.company_name || 'Kein Kunde'} ${r.campaign_name ? '– ' + r.campaign_name : ''}</div>
+          <div style="font-size:12px;color:var(--gray-600);margin-top:4px">${(r.result_preview || '').slice(0,120)}...</div>
+        </div>`).join('');
+    } catch(e) { document.getElementById('historyContent').innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
   }
 
   async function showHistoryDetail(id) {
+    const row = await API.get('/api/admin/ai/history/' + id);
+    document.getElementById('histDetailTitle').textContent = (typeLabels[row.type] || row.type) + ' – ' + (row.created_at || '').slice(0,16);
+    document.getElementById('histDetailBody').innerHTML = `<div class="ai-result-box">${renderMarkdown(row.result || '')}</div>`;
     openModal('modalHistoryDetail');
-    document.getElementById('histDetailBody').innerHTML = '<div class="loading-overlay">Laden...</div>';
-    try {
-      const row = await API.get('/api/admin/ai/history/' + id);
-      document.getElementById('histDetailTitle').textContent = (typeLabels[row.type] || row.type) + ' – ' + formatDate(row.created_at);
-      document.getElementById('histDetailBody').innerHTML = `<div class="ai-result-box">${renderMarkdown(row.result)}</div>`;
-    } catch(e) { showToast(e.message,'error'); }
   }
 
   function copyResult(id) {
     const el = document.getElementById(id);
-    if (!el) return;
-    navigator.clipboard.writeText(el.innerText || el.textContent).then(() => showToast('In Zwischenablage kopiert'));
+    const text = el ? el.innerText : '';
+    navigator.clipboard.writeText(text).then(() => showToast('Kopiert!')).catch(() => showToast('Kopieren fehlgeschlagen', 'error'));
   }
 
   init();
