@@ -71,7 +71,10 @@ Antworte strukturiert mit Markdown. Am Ende IMMER den JSON-Block im vorgegebenen
 **Angebot/Dienstleistung:** ${context.offer || 'nicht angegeben'}
 **Website:** ${context.website || 'keine'}
 **Zielregion:** ${context.region || 'nicht angegeben'}
+**Monatliches Budget:** ${context.budget ? context.budget + '€' : 'nicht angegeben'}
 **Bisherige Erfahrungen:** ${context.notes || 'keine'}${websiteSection}${brandSection}
+
+WICHTIG: Alle Empfehlungen müssen zum angegebenen Budget passen. Keine Strategien vorschlagen die das Budget überschreiten.
 
 Erstelle eine tiefgründige Analyse in diesen Abschnitten:
 
@@ -104,7 +107,8 @@ Realistische KPI-Erwartungen für die ersten 30/60/90 Tage.
   "trustLevel": "hoch|mittel|niedrig",
   "conversionIssues": "wichtigste Conversion-Hürden",
   "recommendedPlatform": "empfohlene Hauptplattform",
-  "targetAudience": "präzise Zielgruppenbeschreibung für Anzeigen"
+  "targetAudience": "präzise Zielgruppenbeschreibung für Anzeigen",
+  "budgetEmpfehlung": "empfohlenes Monatsbudget in Euro als Zahl"
 }
 ---END_JSON---`;
 
@@ -141,10 +145,11 @@ Antworte ausschließlich auf Deutsch. Nutze psychologische Trigger und klare CTA
 **Branche:** ${context.branche || context.industry || 'nicht angegeben'}
 **Angebot:** ${context.angebot || context.offer || 'nicht angegeben'}
 **USP:** ${context.usp || 'nicht angegeben'}
-**Zielgruppe:** ${context.targetAudience || context.zielgruppe || context.targetAudience || 'nicht angegeben'}
+**Zielgruppe:** ${context.targetAudience || context.zielgruppe || 'nicht angegeben'}
 **Region:** ${context.region || 'nicht angegeben'}
 **Plattform:** ${context.platform || 'Facebook/Instagram'}
-**Ton:** ${context.tone || 'professionell, vertrauenswürdig'}${contextBlock}
+**Ton:** ${context.tone || 'professionell, vertrauenswürdig'}
+**Budget/Monat:** ${context.budget ? context.budget + '€' : 'nicht angegeben'}${contextBlock}
 
 Liefere:
 ### 5 Hook-Varianten (erster Satz der Anzeige)
@@ -196,6 +201,7 @@ Gib immer JSON zurück – kein zusätzlicher Text außerhalb des JSON.`;
 
 **Kampagne:** ${context.campaignName || context.angebot || 'nicht angegeben'}
 **Plattform:** ${context.platform || 'nicht angegeben'}
+**Monatliches Budget:** ${context.budget ? context.budget + '€' : 'nicht angegeben'}
 **Metriken der letzten 30 Tage:**
 - Impressionen: ${context.impressions || 0}
 - Klicks: ${context.clicks || 0}

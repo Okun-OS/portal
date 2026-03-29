@@ -27,10 +27,39 @@ router.get('/:id', requireAdmin, (req, res) => {
   `).get(req.params.id);
   if (!customer) return res.status(404).json({ error: 'Kunde nicht gefunden' });
 
-  const campaigns = db.prepare('SELECT * FROM campaigns WHERE customer_id = ? ORDER BY created_at DESC').all(customer.id);
+  const campaigns = db.prepare(`
+    SELECT c.*,
+      (SELECT COUNT(*) FROM leads WHERE campaign_id = c.id) as lead_count,
+      (SELECT COUNT(*) FROM leads WHERE campaign_id = c.id AND status = 'new') as new_leads,
+      (SELECT COUNT(*) FROM leads WHERE campaign_id = c.id AND status = 'closed') as closed_leads
+    FROM campaigns c WHERE c.customer_id = ? ORDER BY c.created_at DESC
+  `).all(customer.id);
+
   const recentLeads = db.prepare('SELECT * FROM leads WHERE customer_id = ? ORDER BY created_at DESC LIMIT 10').all(customer.id);
 
-  res.json({ ...customer, campaigns, recentLeads });
+  const leadStats = db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_count,
+      SUM(CASE WHEN status = 'contacted' THEN 1 ELSE 0 END) as contacted_count,
+      SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_count,
+      SUM(CASE WHEN date(created_at) >= date('now', '-30 days') THEN 1 ELSE 0 END) as last_30_days
+    FROM leads WHERE customer_id = ?
+  `).get(customer.id);
+
+  const budgetTotal = db.prepare(`
+    SELECT SUM(budget_monthly) as total FROM campaigns WHERE customer_id = ? AND status = 'active'
+  `).get(customer.id);
+
+  const metrics = db.prepare(`
+    SELECT SUM(cm.impressions) as impressions, SUM(cm.clicks) as clicks,
+           SUM(cm.spend) as spend, SUM(cm.leads_generated) as leads_generated
+    FROM campaign_metrics cm
+    JOIN campaigns c ON c.id = cm.campaign_id
+    WHERE c.customer_id = ? AND cm.date >= date('now', '-30 days')
+  `).get(customer.id);
+
+  res.json({ ...customer, campaigns, recentLeads, leadStats, budgetTotal: budgetTotal.total || 0, metrics });
 });
 
 // POST /api/admin/customers

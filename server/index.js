@@ -24,6 +24,9 @@ app.use('/api/admin/metrics', require('./routes/admin/metrics'));
 app.use('/api/admin/tasks', require('./routes/admin/tasks'));
 app.use('/api/admin/ai', require('./routes/admin/ai'));
 
+// Webhooks (public – no auth, optional secret)
+app.use('/api/webhooks', require('./routes/webhooks'));
+
 // Admin stats
 const { requireAdmin } = require('./middleware/auth');
 const db = require('./db');

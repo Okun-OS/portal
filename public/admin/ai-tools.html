@@ -80,7 +80,7 @@
             <select id="aiCustomer" class="form-control" style="width:220px" onchange="loadCampaignsForAI()">
               <option value="">-- Kunden wählen --</option>
             </select>
-            <select id="aiCampaign" class="form-control" style="width:220px">
+            <select id="aiCampaign" class="form-control" style="width:220px" onchange="loadCampaignContext()">
               <option value="">-- Kampagne (optional) --</option>
             </select>
             <span id="contextBadge" class="context-badge" style="display:none">&#9989; Analyse-Kontext aktiv</span>
@@ -132,6 +132,10 @@
               <div class="form-group">
                 <label class="form-label">Zielregion</label>
                 <input type="text" id="sRegion" class="form-control" placeholder="Berlin, Bayern, DACH...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Monatliches Budget (€)</label>
+                <input type="number" id="sBudget" class="form-control" placeholder="z.B. 1500">
               </div>
               <div class="form-group">
                 <label class="form-label">Bisherige Erfahrungen / Kontext</label>
@@ -463,9 +467,32 @@
     const camps = await API.get('/api/admin/campaigns?customer_id=' + cid);
     camps.forEach(c => {
       const o = document.createElement('option');
-      o.value = c.id; o.textContent = c.name;
+      o.value = c.id; o.textContent = c.name + (c.budget_monthly ? ' (' + c.budget_monthly + '€/Mo)' : '');
       sel.appendChild(o);
     });
+  }
+
+  async function loadCampaignContext() {
+    const campId = document.getElementById('aiCampaign').value;
+    if (!campId) return;
+    try {
+      const camp = await API.get('/api/admin/campaigns/' + campId);
+      // Auto-fill budget from campaign
+      if (camp.budget_monthly) document.getElementById('sBudget').value = camp.budget_monthly;
+      // Auto-fill platform
+      if (camp.platform) {
+        const plat = document.getElementById('adPlatform');
+        if (plat) [...plat.options].forEach(o => { if (o.value.includes(camp.platform)) plat.value = o.value; });
+      }
+      // Save to context
+      saveContext({
+        budget: camp.budget_monthly,
+        platform: camp.platform,
+        campaignName: camp.name,
+        campaignId: camp.id
+      });
+      showToast('Kampagnendaten geladen: ' + camp.name);
+    } catch(e) { /* silent */ }
   }
 
   function switchTool(name) {
@@ -529,6 +556,7 @@
         offer: document.getElementById('sOffer').value,
         website: document.getElementById('sWebsite').value,
         region: document.getElementById('sRegion').value,
+        budget: document.getElementById('sBudget').value || window.campaignContext.budget || '',
         notes: document.getElementById('sNotes').value,
       };
       const res = await API.post('/api/admin/ai/strategy', { customer_id: cid || null, context });
