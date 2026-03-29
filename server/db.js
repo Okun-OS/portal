@@ -195,4 +195,14 @@ function initializeDatabase() {
 
 initializeDatabase();
 
+// Safe migrations – add columns if they don't exist yet
+const migrations = [
+  'ALTER TABLE campaigns ADD COLUMN target_audience TEXT',
+  'ALTER TABLE campaigns ADD COLUMN meta_campaign_id TEXT',
+  'ALTER TABLE campaigns ADD COLUMN google_campaign_id TEXT',
+];
+for (const sql of migrations) {
+  try { db.exec(sql); } catch { /* column already exists */ }
+}
+
 module.exports = db;
