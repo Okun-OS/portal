@@ -1,4 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const googleResearch = require('./googleResearch');
 
 function getClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -46,7 +47,10 @@ async function scrapeWebsite(url) {
 
 // 1. Strategy Analysis – returns { result, campaignContext }
 async function analyzeStrategy(context) {
-  const websiteContent = context.website ? await scrapeWebsite(context.website) : null;
+  const [websiteContent, brandInsights] = await Promise.all([
+    context.website ? scrapeWebsite(context.website) : Promise.resolve(null),
+    (context.company || context.offer) ? googleResearch.getBrandInsights(context.company || context.offer, context.industry || context.offer, context.region) : Promise.resolve(null),
+  ]);
 
   const system = `Du bist ein erfahrener Performance-Marketing-Stratege für Lead-Generierung.
 Du analysierst Kunden-Setups tiefgründig und gibst konkrete, umsetzbare Empfehlungen auf Deutsch.
@@ -57,13 +61,17 @@ Antworte strukturiert mit Markdown. Am Ende IMMER den JSON-Block im vorgegebenen
     ? `\n\n**Analysierter Website-Inhalt:**\n${websiteContent}`
     : '';
 
+  const brandSection = brandInsights && brandInsights.summary
+    ? `\n\n**Google-Recherche (Live-Daten):**\n${brandInsights.summary}`
+    : '';
+
   const prompt = `Analysiere folgendes Setup und erstelle eine vollständige Marketing-Strategie-Analyse:
 
 **Kunde/Branche:** ${context.company || context.industry || 'nicht angegeben'}
 **Angebot/Dienstleistung:** ${context.offer || 'nicht angegeben'}
-**Website:** ${context.website || 'keine'}${websiteSection}
+**Website:** ${context.website || 'keine'}
 **Zielregion:** ${context.region || 'nicht angegeben'}
-**Bisherige Erfahrungen:** ${context.notes || 'keine'}
+**Bisherige Erfahrungen:** ${context.notes || 'keine'}${websiteSection}${brandSection}
 
 Erstelle eine tiefgründige Analyse in diesen Abschnitten:
 

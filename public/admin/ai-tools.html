@@ -118,6 +118,10 @@
             <div class="card-header"><span class="card-title">&#128269; Analyse-Input</span><span class="text-sm text-muted">Website wird automatisch analysiert</span></div>
             <div class="card-body">
               <div class="form-group">
+                <label class="form-label">Firmenname <span style="font-size:11px;color:var(--gray-400)">(optional – für Google-Bewertungen & Marktanalyse)</span></label>
+                <input type="text" id="sCompany" class="form-control" placeholder="z.B. Müller Immobilien GmbH">
+              </div>
+              <div class="form-group">
                 <label class="form-label">Angebot / Dienstleistung</label>
                 <textarea id="sOffer" class="form-control" rows="3" placeholder="Was verkauft der Kunde? Z.B. Immobilienbewertung, Solaranlage..."></textarea>
               </div>
@@ -519,7 +523,7 @@
     document.getElementById('nextStepsPanel').style.display = 'none';
     try {
       const context = {
-        company: cid ? '' : 'Unbekannt',
+        company: document.getElementById('sCompany').value || '',
         offer: document.getElementById('sOffer').value,
         website: document.getElementById('sWebsite').value,
         region: document.getElementById('sRegion').value,
