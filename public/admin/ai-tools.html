@@ -450,8 +450,16 @@
       document.getElementById('aiCustomer').appendChild(o);
     });
     updateContextBadge();
-    if (window.campaignContext && window.campaignContext.angebot) {
+    const ctx = window.campaignContext;
+    if (ctx && ctx.angebot) {
       document.getElementById('nextStepsPanel').style.display = 'block';
+      // Pre-fill strategy form from saved context
+      if (ctx.budget) document.getElementById('sBudget').value = ctx.budget;
+      if (ctx.website) document.getElementById('sWebsite').value = ctx.website;
+      if (ctx.region) document.getElementById('sRegion').value = ctx.region;
+      if (ctx.angebot) document.getElementById('sOffer').value = ctx.angebot;
+      if (ctx.company) document.getElementById('sCompany').value = ctx.company;
+      fillFromContext();
     }
   }
 
@@ -475,7 +483,8 @@
       const camp = await API.get('/api/admin/campaigns/' + campId);
 
       // Force-overwrite all relevant fields with campaign data
-      if (camp.budget_monthly) document.getElementById('sBudget').value = camp.budget_monthly;
+      document.getElementById('sBudget').value = camp.budget_monthly || '';
+      document.getElementById('optBudget').value = camp.budget_monthly || '';
       if (camp.platform) {
         const plat = document.getElementById('adPlatform');
         if (plat) [...plat.options].forEach(o => { if (o.value.includes(camp.platform)) plat.value = o.value; });
