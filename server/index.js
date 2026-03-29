@@ -70,4 +70,28 @@ app.listen(PORT, () => {
   console.log(`\n🚀 Lead Management Portal läuft auf http://localhost:${PORT}`);
   console.log(`   Admin:  ${process.env.ADMIN_EMAIL || 'admin@leadportal.com'}`);
   console.log(`   Pass:   ${process.env.ADMIN_PASSWORD || 'Admin123!'}\n`);
+
+  // Auto-sync Google & Meta every 3 hours
+  const googleAds = require('./services/googleAds');
+  const metaAds = require('./services/metaAds');
+
+  async function autoSync() {
+    const now = new Date().toLocaleTimeString('de-DE');
+    try {
+      await googleAds.syncAllCampaigns();
+      console.log(`[${now}] Auto-Sync Google Ads: OK`);
+    } catch (e) {
+      console.log(`[${now}] Auto-Sync Google Ads: ${e.message}`);
+    }
+    try {
+      await metaAds.syncAllCampaigns();
+      console.log(`[${now}] Auto-Sync Meta Ads: OK`);
+    } catch (e) {
+      console.log(`[${now}] Auto-Sync Meta Ads: ${e.message}`);
+    }
+  }
+
+  // Run once after 30s on startup, then every 3 hours
+  setTimeout(autoSync, 30 * 1000);
+  setInterval(autoSync, 3 * 60 * 60 * 1000);
 });
