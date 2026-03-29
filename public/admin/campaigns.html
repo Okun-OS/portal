@@ -108,6 +108,16 @@
           <label class="form-label">Beschreibung</label>
           <textarea id="cDesc" class="form-control" rows="3"></textarea>
         </div>
+        <div class="form-group">
+          <label class="form-label">Google Ads Campaign ID</label>
+          <input type="text" id="cGoogleId" class="form-control" placeholder="z.B. 12345678">
+          <div class="form-hint">Kampagnen-ID aus Google Ads (Kampagnen-Einstellungen)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Meta Campaign ID</label>
+          <input type="text" id="cMetaId" class="form-control" placeholder="z.B. 120200123456789">
+          <div class="form-hint">Kampagnen-ID aus Meta Ads Manager</div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -189,7 +199,7 @@
   function openNewCampaign() {
     document.getElementById('campaignModalTitle').textContent = 'Neue Kampagne';
     document.getElementById('campaignId').value = '';
-    ['cName','cDesc','cStart','cEnd'].forEach(id => document.getElementById(id).value = '');
+    ['cName','cDesc','cStart','cEnd','cGoogleId','cMetaId'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('cCustomer').value = '';
     document.getElementById('cPlatform').value = '';
     document.getElementById('cStatus').value = 'active';
@@ -210,6 +220,8 @@
       document.getElementById('cStart').value = c.start_date || '';
       document.getElementById('cEnd').value = c.end_date || '';
       document.getElementById('cDesc').value = c.description || '';
+      document.getElementById('cGoogleId').value = c.google_campaign_id || '';
+      document.getElementById('cMetaId').value = c.meta_campaign_id || '';
       openModal('modalCampaign');
     } catch(e) { showToast(e.message,'error'); }
   }
@@ -225,6 +237,8 @@
       start_date: document.getElementById('cStart').value || null,
       end_date: document.getElementById('cEnd').value || null,
       description: document.getElementById('cDesc').value,
+      google_campaign_id: document.getElementById('cGoogleId').value || null,
+      meta_campaign_id: document.getElementById('cMetaId').value || null,
     };
     try {
       if (id) await API.put('/api/admin/campaigns/' + id, body);

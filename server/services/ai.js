@@ -52,10 +52,14 @@ async function analyzeStrategy(context) {
     (context.company || context.offer) ? googleResearch.getBrandInsights(context.company || context.offer, context.industry || context.offer, context.region) : Promise.resolve(null),
   ]);
 
+  const budgetConstraint = context.budget
+    ? ` Das Monatsbudget beträgt ${context.budget}€ – das ist ein absolutes Limit. Empfehle niemals Ausgaben die darüber liegen.`
+    : '';
+
   const system = `Du bist ein erfahrener Performance-Marketing-Stratege für Lead-Generierung.
 Du analysierst Kunden-Setups tiefgründig und gibst konkrete, umsetzbare Empfehlungen auf Deutsch.
 Du erkennst automatisch Zielgruppen, Pain Points, USPs und Marktchancen – auch wenn der User wenig Input liefert.
-Antworte strukturiert mit Markdown. Am Ende IMMER den JSON-Block im vorgegebenen Format ausgeben.`;
+Antworte strukturiert mit Markdown. Am Ende IMMER den JSON-Block im vorgegebenen Format ausgeben.${budgetConstraint}`;
 
   const websiteSection = websiteContent
     ? `\n\n**Analysierter Website-Inhalt:**\n${websiteContent}`
@@ -74,7 +78,7 @@ Antworte strukturiert mit Markdown. Am Ende IMMER den JSON-Block im vorgegebenen
 **Monatliches Budget:** ${context.budget ? context.budget + '€' : 'nicht angegeben'}
 **Bisherige Erfahrungen:** ${context.notes || 'keine'}${websiteSection}${brandSection}
 
-WICHTIG: Alle Empfehlungen müssen zum angegebenen Budget passen. Keine Strategien vorschlagen die das Budget überschreiten.
+PFLICHT: Das Monatsbudget von ${context.budget ? context.budget + '€' : 'nicht angegeben'} ist ein HARTES LIMIT. Schlage NIEMALS Maßnahmen vor die mehr kosten. Alle Budgetaufteilungen, Kanal-Empfehlungen und Strategien müssen innerhalb dieses Budgets bleiben. Kein höheres Budget empfehlen.
 
 Erstelle eine tiefgründige Analyse in diesen Abschnitten:
 
@@ -108,7 +112,7 @@ Realistische KPI-Erwartungen für die ersten 30/60/90 Tage.
   "conversionIssues": "wichtigste Conversion-Hürden",
   "recommendedPlatform": "empfohlene Hauptplattform",
   "targetAudience": "präzise Zielgruppenbeschreibung für Anzeigen",
-  "budgetEmpfehlung": "empfohlenes Monatsbudget in Euro als Zahl"
+  "budget": ${context.budget ? context.budget : 'null'}
 }
 ---END_JSON---`;
 
