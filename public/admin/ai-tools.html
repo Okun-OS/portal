@@ -300,10 +300,12 @@
               <div class="result-tab active" onclick="switchResultTab('resStrategy')">&#128269; Strategie</div>
               <div class="result-tab" onclick="switchResultTab('resAds')">&#9997; Anzeigen</div>
               <div class="result-tab" onclick="switchResultTab('resFunnel')">&#127915; Funnel</div>
+              <div class="result-tab" onclick="switchResultTab('resStructure')">&#128196; Kampagnenstruktur</div>
             </div>
             <div id="resStrategy" class="result-pane active"></div>
             <div id="resAds" class="result-pane"></div>
             <div id="resFunnel" class="result-pane"></div>
+            <div id="resStructure" class="result-pane"></div>
           </div>
         </div>
       </div>
@@ -487,7 +489,7 @@
 
   function switchResultTab(id) {
     document.querySelectorAll('.result-tab').forEach((t, i) => {
-      const ids = ['resStrategy','resAds','resFunnel'];
+      const ids = ['resStrategy','resAds','resFunnel','resStructure'];
       t.classList.toggle('active', ids[i] === id);
     });
     document.querySelectorAll('.result-pane').forEach(p => p.classList.remove('active'));
@@ -673,6 +675,7 @@
       document.getElementById('resStrategy').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.strategy)}</div>`;
       document.getElementById('resAds').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.adCopy)}</div>`;
       document.getElementById('resFunnel').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.funnel)}</div>`;
+      document.getElementById('resStructure').innerHTML = `<div class="ai-result-box">${renderMarkdown(res.structure || '')}</div>`;
       if (res.campaignContext) saveContext(res.campaignContext);
       showToast('Komplette Kampagne erstellt!');
     } catch(e) {

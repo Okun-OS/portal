@@ -108,6 +108,7 @@ router.post('/complete-campaign', requireAdmin, async (req, res) => {
       saveAnalysis.run(customer_id, campaign_id || null, 'strategy', JSON.stringify(context), result.strategy, req.user.name);
       saveAnalysis.run(customer_id, campaign_id || null, 'ad_copy', JSON.stringify(result.campaignContext), result.adCopy, req.user.name);
       saveAnalysis.run(customer_id, campaign_id || null, 'funnel', JSON.stringify(result.campaignContext), result.funnel, req.user.name);
+      if (result.structure) saveAnalysis.run(customer_id, campaign_id || null, 'strategy', JSON.stringify(result.campaignContext), result.structure, req.user.name);
     }
 
     res.json(result);

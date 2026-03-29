@@ -99,6 +99,7 @@ Realistische KPI-Erwartungen für die ersten 30/60/90 Tage.
   "usp": "wichtigstes Alleinstellungsmerkmal",
   "website": "${context.website || ''}",
   "analyseInsights": "wichtigste Erkenntnis der Analyse in 1-2 Sätzen",
+  "websiteInsights": "Einschätzung der Website: Professionalität, Tonalität, Conversion-Stärken/-Schwächen (oder 'keine Website angegeben')",
   "marketInsights": "Marktkontext und Wettbewerbssituation",
   "trustLevel": "hoch|mittel|niedrig",
   "conversionIssues": "wichtigste Conversion-Hürden",
@@ -229,19 +230,56 @@ Antworte NUR mit gültigem JSON:
   }
 }
 
-// 5. Complete Campaign – runs strategy + ads + funnel in sequence
+// 5. Campaign Structure – budget split, timeline, platform setup
+async function generateCampaignStructure(context) {
+  const system = `Du bist ein Performance-Marketing-Experte.
+Erstelle eine konkrete, umsetzbare Kampagnenstruktur auf Deutsch. Nutze Markdown.`;
+
+  const prompt = `Erstelle eine vollständige Kampagnenstruktur für:
+
+**Angebot:** ${context.angebot || context.offer || 'nicht angegeben'}
+**Zielgruppe:** ${context.targetAudience || context.zielgruppe || 'nicht angegeben'}
+**Branche:** ${context.branche || 'nicht angegeben'}
+**Region:** ${context.region || 'nicht angegeben'}
+**Empfohlene Plattform:** ${context.recommendedPlatform || 'Facebook/Instagram'}
+**USP:** ${context.usp || 'nicht angegeben'}
+
+Liefere:
+### Budget-Empfehlung & Aufteilung
+Monatsbudget-Vorschlag mit Aufteilung (Awareness/Retargeting/Testing).
+
+### Kampagnen-Struktur
+Kampagnen → Anzeigengruppen → Anzeigen Hierarchie mit konkreten Namen.
+
+### Zielgruppen-Setup
+Genaue Targeting-Einstellungen (Alter, Interessen, Custom Audiences).
+
+### Zeitplan (erste 90 Tage)
+Woche 1–4: Testing-Phase, Woche 5–8: Skalierung, Woche 9–12: Optimierung.
+
+### KPI-Ziele
+Konkrete Zielwerte für CTR, CPL, Conversion Rate.
+
+### Sofort-Checkliste
+Die 10 wichtigsten Setup-Schritte vor dem Launch.`;
+
+  return generate(system, prompt, 2000);
+}
+
+// 6. Complete Campaign – runs strategy + ads + funnel + structure in sequence
 async function createCompleteCampaign(context) {
   // Step 1: Strategy + context extraction
   const { result: strategy, campaignContext } = await analyzeStrategy(context);
 
-  // Step 2: Use extracted context for ads
+  // Step 2: Use extracted context for all modules in parallel
   const mergedContext = { ...context, ...(campaignContext || {}) };
-  const adCopy = await generateAdCopy(mergedContext);
+  const [adCopy, funnel, structure] = await Promise.all([
+    generateAdCopy(mergedContext),
+    generateFunnelConcept(mergedContext),
+    generateCampaignStructure(mergedContext),
+  ]);
 
-  // Step 3: Funnel concept
-  const funnel = await generateFunnelConcept(mergedContext);
-
-  return { strategy, adCopy, funnel, campaignContext: mergedContext };
+  return { strategy, adCopy, funnel, structure, campaignContext: mergedContext };
 }
 
 // 6. Client-friendly explanation
