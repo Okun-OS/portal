@@ -136,9 +136,10 @@ Realistische KPI-Erwartungen für die ersten 30/60/90 Tage.
 
 // 2. Generate Ad Copy – uses campaignContext if available
 async function generateAdCopy(context) {
+  const budgetNote = context.budget ? ` Budget: ${context.budget}€/Monat – keine teureren Maßnahmen vorschlagen.` : '';
   const system = `Du bist ein erstklassiger Texter für bezahlte Werbung (Facebook, Instagram, Google Ads).
 Deine Texte sind präzise, wirkungsvoll und auf Konversion ausgelegt.
-Antworte ausschließlich auf Deutsch. Nutze psychologische Trigger und klare CTAs.`;
+Antworte ausschließlich auf Deutsch. Nutze psychologische Trigger und klare CTAs.${budgetNote}`;
 
   const contextBlock = context.analyseInsights
     ? `\n**Erkenntnisse aus der Strategie-Analyse:** ${context.analyseInsights}`
@@ -166,8 +167,9 @@ Liefere:
 
 // 3. Landing Page Concept – uses campaignContext if available
 async function generateFunnelConcept(context) {
+  const budgetNote = context.budget ? ` Budget: ${context.budget}€/Monat – alle Empfehlungen müssen darin umsetzbar sein.` : '';
   const system = `Du bist ein Conversion-Rate-Optimierungs-Experte für Lead-Generierungs-Landingpages.
-Erstelle detaillierte, umsetzbare Konzepte. Antworte auf Deutsch.`;
+Erstelle detaillierte, umsetzbare Konzepte. Antworte auf Deutsch.${budgetNote}`;
 
   const contextBlock = context.analyseInsights
     ? `\n**Erkenntnisse aus der Strategie-Analyse:** ${context.analyseInsights}
@@ -197,9 +199,10 @@ Liefere:
 
 // 4. Campaign Optimization
 async function generateOptimizationTasks(context) {
+  const budgetNote = context.budget ? ` Das Budget beträgt ${context.budget}€/Monat – schlage nur Maßnahmen vor die darin passen.` : '';
   const system = `Du bist ein Performance-Marketing-Analyst.
 Analysiere Kampagnendaten und erstelle konkrete, priorisierte Optimierungs-Tasks.
-Gib immer JSON zurück – kein zusätzlicher Text außerhalb des JSON.`;
+Gib immer JSON zurück – kein zusätzlicher Text außerhalb des JSON.${budgetNote}`;
 
   const prompt = `Analysiere diese Kampagnendaten und erstelle Optimierungs-Tasks:
 
@@ -242,8 +245,9 @@ Antworte NUR mit gültigem JSON:
 
 // 5. Campaign Structure – budget split, timeline, platform setup
 async function generateCampaignStructure(context) {
+  const budgetNote = context.budget ? ` Das verfügbare Monatsbudget ist ${context.budget}€ – halte alle Empfehlungen strikt darin.` : '';
   const system = `Du bist ein Performance-Marketing-Experte.
-Erstelle eine konkrete, umsetzbare Kampagnenstruktur auf Deutsch. Nutze Markdown.`;
+Erstelle eine konkrete, umsetzbare Kampagnenstruktur auf Deutsch. Nutze Markdown.${budgetNote}`;
 
   const prompt = `Erstelle eine vollständige Kampagnenstruktur für:
 
@@ -253,10 +257,11 @@ Erstelle eine konkrete, umsetzbare Kampagnenstruktur auf Deutsch. Nutze Markdown
 **Region:** ${context.region || 'nicht angegeben'}
 **Empfohlene Plattform:** ${context.recommendedPlatform || 'Facebook/Instagram'}
 **USP:** ${context.usp || 'nicht angegeben'}
+**Monatliches Budget:** ${context.budget ? context.budget + '€ (HARTES LIMIT – nicht überschreiten)' : 'nicht angegeben'}
 
 Liefere:
-### Budget-Empfehlung & Aufteilung
-Monatsbudget-Vorschlag mit Aufteilung (Awareness/Retargeting/Testing).
+### Budget-Aufteilung
+Aufteilung des vorhandenen Budgets (Awareness/Retargeting/Testing) – kein höheres Budget empfehlen.
 
 ### Kampagnen-Struktur
 Kampagnen → Anzeigengruppen → Anzeigen Hierarchie mit konkreten Namen.
