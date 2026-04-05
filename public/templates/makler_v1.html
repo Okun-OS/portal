@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{headline}} – {{firmen_name}}</title>
+  <meta name="description" content="{{subheadline}}">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; background: #fff; }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d5986 60%, #1a3a6b 100%);
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('{{hero_image}}');
+      background-size: cover; background-position: center;
+      opacity: 0.18;
+    }
+    .hero-content {
+      position: relative; z-index: 1;
+      max-width: 1100px; margin: 0 auto; padding: 60px 24px;
+      display: grid; grid-template-columns: 1fr 420px; gap: 48px; align-items: center;
+    }
+    .hero-left { color: #fff; }
+    .hero-badge {
+      display: inline-block; background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; font-size: 13px; font-weight: 600;
+      padding: 6px 16px; border-radius: 20px; margin-bottom: 20px; letter-spacing: 0.5px;
+    }
+    .hero-headline {
+      font-size: clamp(28px, 4vw, 48px); font-weight: 800;
+      line-height: 1.15; margin-bottom: 16px; color: #fff;
+    }
+    .hero-sub {
+      font-size: 18px; color: rgba(255,255,255,0.85);
+      line-height: 1.6; margin-bottom: 32px;
+    }
+    .benefits-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .benefits-list li {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 16px; color: rgba(255,255,255,0.92); font-weight: 500;
+    }
+    .benefits-list li::before {
+      content: '✓'; display: flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; background: #4ade80;
+      border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .makler-card {
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px; padding: 20px; margin-top: 32px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .makler-foto {
+      width: 64px; height: 64px; border-radius: 50%;
+      object-fit: cover; border: 3px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.1);
+    }
+    .makler-info { color: #fff; }
+    .makler-info strong { display: block; font-size: 16px; }
+    .makler-info span { font-size: 13px; opacity: 0.75; }
+
+    /* ── FORM CARD ── */
+    .form-card {
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      padding: 32px; position: relative;
+    }
+    .form-card h2 {
+      font-size: 20px; font-weight: 700; color: #1e3a5f;
+      margin-bottom: 6px; text-align: center;
+    }
+    .form-card .form-sub {
+      font-size: 13px; color: #6b7280; text-align: center; margin-bottom: 20px;
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #d1d5db;
+      border-radius: 8px; font-size: 14px; color: #111;
+      transition: border-color 0.2s; background: #fafafa; outline: none;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: #1e3a5f; background: #fff;
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .btn-submit {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff; font-size: 16px; font-weight: 700;
+      border: none; border-radius: 10px; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      margin-top: 4px;
+    }
+    .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,158,11,0.4); }
+    .btn-submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+    .privacy-text {
+      font-size: 11px; color: #9ca3af; text-align: center; margin-top: 10px;
+      line-height: 1.4;
+    }
+    .form-success {
+      display: none; text-align: center; padding: 20px 0;
+    }
+    .form-success .success-icon {
+      font-size: 48px; margin-bottom: 12px;
+    }
+    .form-success h3 { font-size: 22px; color: #1e3a5f; margin-bottom: 8px; }
+    .form-success p { font-size: 15px; color: #6b7280; }
+
+    /* ── TRUST SECTION ── */
+    .trust-section {
+      background: #f8fafc; padding: 64px 24px;
+    }
+    .trust-inner {
+      max-width: 900px; margin: 0 auto; text-align: center;
+    }
+    .trust-inner h2 {
+      font-size: 30px; font-weight: 700; color: #1e3a5f; margin-bottom: 12px;
+    }
+    .trust-inner p {
+      font-size: 17px; color: #4b5563; line-height: 1.7; max-width: 680px; margin: 0 auto 40px;
+    }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 24px;
+    }
+    .stat-item {
+      background: #fff; border-radius: 12px; padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .stat-num { font-size: 36px; font-weight: 800; color: #1e3a5f; }
+    .stat-label { font-size: 14px; color: #6b7280; margin-top: 4px; }
+
+    /* ── LOGO ── */
+    .logo-wrap {
+      position: absolute; top: 20px; left: 24px; z-index: 10;
+    }
+    .logo-wrap img { max-height: 48px; max-width: 160px; object-fit: contain; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: #1e3a5f; color: rgba(255,255,255,0.6);
+      padding: 24px; text-align: center; font-size: 13px;
+    }
+    footer a { color: rgba(255,255,255,0.6); }
+
+    @media (max-width: 768px) {
+      .hero-content { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .form-card { border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO SECTION -->
+<section class="hero">
+  <div class="hero-bg"></div>
+
+  {{#if logo}}
+  <div class="logo-wrap">
+    <img src="{{logo}}" alt="{{firmen_name}} Logo">
+  </div>
+  {{/if}}
+
+  <div class="hero-content">
+    <div class="hero-left">
+      <div class="hero-badge">&#127968; Immobilien · {{stadt}}</div>
+      <h1 class="hero-headline">{{headline}}</h1>
+      <p class="hero-sub">{{subheadline}}</p>
+
+      <ul class="benefits-list">
+        <li>{{benefit_1}}</li>
+        <li>{{benefit_2}}</li>
+        <li>{{benefit_3}}</li>
+      </ul>
+
+      <div class="makler-card">
+        {{#if makler_foto}}
+        <img src="{{makler_foto}}" alt="{{makler_name}}" class="makler-foto">
+        {{else}}
+        <div class="makler-foto" style="display:flex;align-items:center;justify-content:center;font-size:28px;">&#128100;</div>
+        {{/if}}
+        <div class="makler-info">
+          <strong>{{makler_name}}</strong>
+          <span>{{firmen_name}} · {{stadt}}</span>
+          {{#if telefon}}<span style="display:block;margin-top:2px">&#128222; {{telefon}}</span>{{/if}}
+        </div>
+      </div>
+    </div>
+
+    <!-- LEAD FORM -->
+    <div class="form-card">
+      <h2>{{form_headline}}</h2>
+      <p class="form-sub">Kostenlos &amp; unverbindlich</p>
+
+      <div id="formWrap">
+        <form id="leadForm" onsubmit="submitLead(event)">
+          {{FORM_FIELDS}}
+          <button type="submit" class="btn-submit" id="btnSubmit">{{cta_text}}</button>
+          <p class="privacy-text">&#128274; {{privacy_text}}</p>
+        </form>
+      </div>
+      <div class="form-success" id="formSuccess">
+        <div class="success-icon">&#127881;</div>
+        <h3>{{danke_headline}}</h3>
+        <p>{{danke_text}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST SECTION -->
+<section class="trust-section">
+  <div class="trust-inner">
+    <h2>Warum {{firmen_name}}?</h2>
+    <p>{{vertrauen_text}}</p>
+
+    <div class="stats-grid">
+      {{#if erfahrung_jahre}}
+      <div class="stat-item">
+        <div class="stat-num">{{erfahrung_jahre}}+</div>
+        <div class="stat-label">Jahre Erfahrung</div>
+      </div>
+      {{/if}}
+      {{#if verkaufte_obj}}
+      <div class="stat-item">
+        <div class="stat-num">{{verkaufte_obj}}</div>
+        <div class="stat-label">Verkaufte Objekte</div>
+      </div>
+      {{/if}}
+      {{#if bewertungen}}
+      <div class="stat-item">
+        <div class="stat-num">{{bewertungen}}&#11088;</div>
+        <div class="stat-label">Kundenbewertungen</div>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+</section>
+
+<footer>
+  &copy; {{firmen_name}} · {{stadt}}
+  {{#if website_url}}&nbsp;·&nbsp;<a href="{{website_url}}" target="_blank">Website</a>{{/if}}
+  &nbsp;·&nbsp;<a href="#">Datenschutz</a> &nbsp;·&nbsp; <a href="#">Impressum</a>
+</footer>
+
+<script>
+  async function submitLead(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Wird gesendet...';
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    data.funnel_id = '{{FUNNEL_ID}}';
+    data.funnel_slug = '{{FUNNEL_SLUG}}';
+    data.customer_id = '{{CUSTOMER_ID}}';
+    data.campaign_id = '{{CAMPAIGN_ID}}';
+
+    try {
+      const res = await fetch('/api/webhooks/funnel-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error();
+      document.getElementById('formWrap').style.display = 'none';
+      document.getElementById('formSuccess').style.display = 'block';
+    } catch {
+      btn.disabled = false;
+      btn.textContent = '{{cta_text}}';
+      alert('Fehler beim Senden. Bitte versuchen Sie es erneut.');
+    }
+  }
+</script>
+</body>
+</html>

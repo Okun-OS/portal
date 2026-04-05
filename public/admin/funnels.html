@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – Funnels</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .template-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-bottom:24px; }
+    .template-card { border:2px solid #e5e7eb; border-radius:12px; padding:20px; cursor:pointer; transition:all 0.2s; background:#fff; }
+    .template-card:hover { border-color:var(--primary); box-shadow:0 4px 16px rgba(99,102,241,0.12); }
+    .template-card.selected { border-color:var(--primary); background:#f5f3ff; }
+    .template-card h3 { font-size:15px; font-weight:700; margin-bottom:6px; }
+    .template-card p { font-size:13px; color:#6b7280; }
+    .template-badge { font-size:11px; background:#ede9fe; color:#6d28d9; padding:2px 8px; border-radius:20px; margin-bottom:10px; display:inline-block; }
+    .flow-progress { display:flex; gap:0; margin-bottom:28px; }
+    .flow-step-li { flex:1; padding:10px 16px; background:#f9fafb; border:1px solid #e5e7eb; font-size:13px; font-weight:600; color:#9ca3af; text-align:center; cursor:pointer; }
+    .flow-step-li:first-child { border-radius:8px 0 0 8px; }
+    .flow-step-li:last-child { border-radius:0 8px 8px 0; }
+    .flow-step-li.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .flow-step-li.done { background:#d1fae5; color:#065f46; border-color:#6ee7b7; }
+    .step-panel { display:none; } .step-panel.active { display:block; }
+    .dynamic-field { margin-bottom:14px; }
+    .dynamic-field label { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:5px; }
+    .dynamic-field input, .dynamic-field textarea, .dynamic-field select { width:100%; padding:10px 14px; border:1.5px solid #d1d5db; border-radius:8px; font-size:14px; outline:none; }
+    .dynamic-field input:focus, .dynamic-field textarea:focus { border-color:var(--primary); }
+    .dynamic-field textarea { resize:vertical; min-height:80px; }
+    .dynamic-field .field-hint { font-size:11px; color:#9ca3af; margin-top:3px; }
+    .slot-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+    .slot-card { border:1px solid #e5e7eb; border-radius:10px; padding:16px; }
+    .slot-card h4 { font-size:13px; font-weight:700; margin-bottom:6px; }
+    .slot-card p { font-size:12px; color:#6b7280; margin-bottom:10px; }
+    .upload-zone { border:2px dashed #d1d5db; border-radius:8px; padding:24px; text-align:center; cursor:pointer; transition:border-color 0.2s; }
+    .upload-zone:hover { border-color:var(--primary); }
+    .upload-zone img { max-height:120px; max-width:100%; object-fit:contain; margin-top:8px; border-radius:6px; }
+    .text-slot-item { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:14px; margin-bottom:10px; }
+    .text-slot-item label { font-size:12px; font-weight:700; color:#6d28d9; display:block; margin-bottom:6px; }
+    .text-slot-item input, .text-slot-item textarea { width:100%; border:1px solid #e5e7eb; border-radius:6px; padding:8px 10px; font-size:13px; outline:none; background:#fff; }
+    .text-slot-item textarea { min-height:70px; resize:vertical; }
+    .ai-badge { font-size:10px; background:#ede9fe; color:#6d28d9; padding:1px 6px; border-radius:10px; margin-left:6px; }
+    .char-count { font-size:10px; color:#9ca3af; text-align:right; margin-top:2px; }
+    .funnel-row { display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid #f3f4f6; }
+    .funnel-row:last-child { border-bottom:none; }
+    .funnel-status { font-size:11px; padding:2px 9px; border-radius:20px; font-weight:600; }
+    .status-draft { background:#f3f4f6; color:#6b7280; }
+    .status-published { background:#d1fae5; color:#065f46; }
+    .preview-frame { width:100%; height:600px; border:1px solid #e5e7eb; border-radius:10px; }
+    .section-title { font-size:16px; font-weight:700; color:#1f2937; margin-bottom:4px; }
+    .section-sub { font-size:13px; color:#6b7280; margin-bottom:20px; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" data-key="dashboard" onclick="location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Kunden &amp; Leads</span></div>
+      <div class="nav-item" data-key="customers" onclick="location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" data-key="leads" onclick="location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-section"><span class="nav-section-label">Kampagnen</span></div>
+      <div class="nav-item" data-key="campaigns" onclick="location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
+      <div class="nav-item" data-key="analytics" onclick="location.href='/admin/analytics.html'"><span class="nav-icon">&#128200;</span> Analytics</div>
+      <div class="nav-section"><span class="nav-section-label">Funnel</span></div>
+      <div class="nav-item active" data-key="funnels" onclick="location.href='/admin/funnels.html'"><span class="nav-icon">&#127915;</span> Funnels</div>
+      <div class="nav-section"><span class="nav-section-label">KI-Tools</span></div>
+      <div class="nav-item" data-key="ai" onclick="location.href='/admin/ai-tools.html'"><span class="nav-icon">&#129504;</span> Analyse &amp; Studio</div>
+      <div class="nav-item" data-key="tasks" onclick="location.href='/admin/tasks.html'"><span class="nav-icon">&#9989;</span> Optimierungs-Tasks</div>
+      <div class="nav-section"><span class="nav-section-label">Dokumente</span></div>
+      <div class="nav-item" data-key="documents" onclick="location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">&#127915; Funnels</h1>
+      <button class="btn btn-primary" onclick="openBuilder()">&#43; Neuer Funnel</button>
+    </div>
+    <div class="page-body">
+
+      <!-- FUNNEL LIST -->
+      <div id="viewList">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Alle Funnels</span>
+            <select id="filterCustomer" class="form-control" style="width:200px" onchange="loadFunnels()">
+              <option value="">Alle Kunden</option>
+            </select>
+          </div>
+          <div class="card-body" id="funnelList">
+            <div class="text-muted text-sm">Laden...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FUNNEL BUILDER -->
+      <div id="viewBuilder" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div>
+            <div class="section-title" id="builderTitle">Neuer Funnel</div>
+            <div class="section-sub" id="builderSub">Schritt 1 von 5</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="closeBuilder()">&#8592; Zurück zur Liste</button>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="flow-progress" id="flowProgress">
+          <div class="flow-step-li active" id="step-li-1" onclick="goStep(1)">1 · Template</div>
+          <div class="flow-step-li" id="step-li-2" onclick="goStep(2)">2 · Kundendaten</div>
+          <div class="flow-step-li" id="step-li-3" onclick="goStep(3)">3 · Bilder</div>
+          <div class="flow-step-li" id="step-li-4" onclick="goStep(4)">4 · Texte &amp; KI</div>
+          <div class="flow-step-li" id="step-li-5" onclick="goStep(5)">5 · Vorschau &amp; Publish</div>
+        </div>
+
+        <!-- Step 1: Template + Customer -->
+        <div class="step-panel active" id="step-1">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Kunde &amp; Template wählen</span></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Kunde <span class="required">*</span></label>
+                <select id="newCustomer" class="form-control" onchange="loadCampaignsForFunnel()">
+                  <option value="">-- Kunde wählen --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kampagne (optional)</label>
+                <select id="newCampaign" class="form-control">
+                  <option value="">-- Keine / Später --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Funnel-Name <span class="required">*</span></label>
+                <input type="text" id="newFunnelName" class="form-control" placeholder="z.B. Immobilien Lead Funnel Q1">
+              </div>
+              <div class="form-label" style="margin-bottom:12px;margin-top:20px">Template wählen <span class="required">*</span></div>
+              <div class="template-grid" id="templateGrid">
+                <div class="text-muted text-sm">Laden...</div>
+              </div>
+              <input type="hidden" id="selectedTemplate" value="">
+              <button class="btn btn-primary" onclick="createFunnel()">Weiter &#8594;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Dynamic Fields -->
+        <div class="step-panel" id="step-2">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Kundendaten eingeben</span>
+              <span class="text-sm text-muted" id="step2TemplateName"></span>
+            </div>
+            <div class="card-body">
+              <div id="requiredFieldsWrap">
+                <div class="section-title" style="font-size:14px;margin-bottom:12px">Pflichtfelder</div>
+                <div id="requiredFields"></div>
+              </div>
+              <div id="optionalFieldsWrap" style="margin-top:20px">
+                <div class="section-title" style="font-size:14px;margin-bottom:12px;color:#6b7280">Optionale Felder <span style="font-size:12px;font-weight:400">(erhöhen die Qualität)</span></div>
+                <div id="optionalFields"></div>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button class="btn btn-secondary" onclick="goStep(1)">&#8592; Zurück</button>
+                <button class="btn btn-primary" onclick="saveFields()">Speichern &amp; Weiter &#8594;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Image Uploads -->
+        <div class="step-panel" id="step-3">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Bilder hochladen</span></div>
+            <div class="card-body">
+              <div class="slot-grid" id="imageSlotGrid"></div>
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button class="btn btn-secondary" onclick="goStep(2)">&#8592; Zurück</button>
+                <button class="btn btn-primary" onclick="goStep(4)">Weiter zu Texten &#8594;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Text Slots + AI -->
+        <div class="step-panel" id="step-4">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Texte &amp; KI-Generierung</span>
+              <button class="btn btn-primary btn-sm" id="btnGenerate" onclick="generateTexts()">&#129504; KI: Alle Texte generieren</button>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info" style="margin-bottom:16px;font-size:13px">
+                &#129504; Klicke auf "KI: Alle Texte generieren" – die KI füllt alle Felder automatisch aus. Du kannst danach alles manuell anpassen.
+              </div>
+              <div id="textSlotList"></div>
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button class="btn btn-secondary" onclick="goStep(3)">&#8592; Zurück</button>
+                <button class="btn btn-primary" onclick="saveTexts()">Speichern &amp; Vorschau &#8594;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Preview + Publish -->
+        <div class="step-panel" id="step-5">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Vorschau &amp; Veröffentlichen</span>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-secondary btn-sm" onclick="loadPreview()">&#8635; Vorschau aktualisieren</button>
+                <button class="btn btn-primary btn-sm" id="btnPublish" onclick="publishFunnel()">&#127919; Funnel veröffentlichen</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="publishInfo" style="display:none;margin-bottom:16px" class="alert alert-info"></div>
+              <iframe id="previewFrame" class="preview-frame" src="about:blank"></iframe>
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button class="btn btn-secondary" onclick="goStep(4)">&#8592; Texte bearbeiten</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
+<style>.toast-success{background:#16a34a}.toast-error{background:#dc2626}</style>
+
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  initNav('funnels');
+
+  let customers = [], templates = [];
+  let currentFunnel = null;
+  let currentTemplate = null;
+  let currentStep = 1;
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  async function init() {
+    [customers, templates] = await Promise.all([
+      API.get('/api/admin/customers'),
+      API.get('/api/admin/funnels/templates'),
+    ]);
+
+    customers.forEach(c => {
+      ['newCustomer','filterCustomer'].forEach(id => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = c.company_name;
+        document.getElementById(id).appendChild(o);
+      });
+    });
+
+    renderTemplateGrid();
+    loadFunnels();
+  }
+
+  // ── Funnel List ───────────────────────────────────────────────────────────
+  async function loadFunnels() {
+    const cid = document.getElementById('filterCustomer').value;
+    let url = '/api/admin/funnels';
+    if (cid) url += '?customer_id=' + cid;
+    const funnels = await API.get(url);
+    const el = document.getElementById('funnelList');
+    if (!funnels.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:32px"><div class="empty-state-icon">&#127915;</div><h3>Noch keine Funnels</h3><p>Erstelle deinen ersten Funnel.</p></div>';
+      return;
+    }
+    el.innerHTML = funnels.map(f => `
+      <div class="funnel-row">
+        <div style="flex:1">
+          <strong style="font-size:14px">${f.name}</strong>
+          <span class="funnel-status status-${f.status}" style="margin-left:8px">${f.status === 'published' ? '&#9989; Veröffentlicht' : '&#9999; Entwurf'}</span>
+          <div class="text-sm text-muted" style="margin-top:2px">${f.company_name} &nbsp;·&nbsp; Template: ${f.template_id}</div>
+          ${f.slug ? `<div style="font-size:11px;color:#6d28d9;margin-top:2px">&#127760; <a href="/f/${f.slug}/" target="_blank">/f/${f.slug}/</a></div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-secondary" onclick="editFunnel(${f.id})">&#9998; Bearbeiten</button>
+          ${f.slug ? `<a href="/f/${f.slug}/" target="_blank" class="btn btn-sm btn-outline">&#127760; Öffnen</a>` : ''}
+          <button class="btn btn-sm btn-danger" onclick="deleteFunnel(${f.id},'${f.name}')">&#215;</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Template Grid ─────────────────────────────────────────────────────────
+  function renderTemplateGrid() {
+    document.getElementById('templateGrid').innerHTML = templates.map(t => `
+      <div class="template-card" id="tcard-${t.template_id}" onclick="selectTemplate('${t.template_id}')">
+        <div class="template-badge">${t.category || 'Allgemein'}</div>
+        <h3>${t.name}</h3>
+        <p>${t.description}</p>
+      </div>
+    `).join('');
+  }
+
+  function selectTemplate(id) {
+    document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('tcard-' + id).classList.add('selected');
+    document.getElementById('selectedTemplate').value = id;
+  }
+
+  async function loadCampaignsForFunnel() {
+    const cid = document.getElementById('newCustomer').value;
+    const sel = document.getElementById('newCampaign');
+    sel.innerHTML = '<option value="">-- Keine / Später --</option>';
+    if (!cid) return;
+    const camps = await API.get('/api/admin/campaigns?customer_id=' + cid);
+    camps.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name;
+      sel.appendChild(o);
+    });
+  }
+
+  // ── Builder ───────────────────────────────────────────────────────────────
+  function openBuilder() {
+    currentFunnel = null; currentTemplate = null; currentStep = 1;
+    document.getElementById('newCustomer').value = '';
+    document.getElementById('newFunnelName').value = '';
+    document.getElementById('selectedTemplate').value = '';
+    document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('viewList').style.display = 'none';
+    document.getElementById('viewBuilder').style.display = 'block';
+    document.getElementById('builderTitle').textContent = 'Neuer Funnel';
+    goStepUI(1);
+  }
+
+  async function editFunnel(id) {
+    currentFunnel = await API.get('/api/admin/funnels/' + id);
+    currentTemplate = await API.get('/api/admin/funnels/templates/' + currentFunnel.template_id);
+    document.getElementById('viewList').style.display = 'none';
+    document.getElementById('viewBuilder').style.display = 'block';
+    document.getElementById('builderTitle').textContent = currentFunnel.name;
+    goStep(2);
+  }
+
+  function closeBuilder() {
+    document.getElementById('viewList').style.display = 'block';
+    document.getElementById('viewBuilder').style.display = 'none';
+    loadFunnels();
+  }
+
+  function goStepUI(n) {
+    currentStep = n;
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step-' + n).classList.add('active');
+    for (let i = 1; i <= 5; i++) {
+      const li = document.getElementById('step-li-' + i);
+      li.classList.remove('active','done');
+      if (i < n) li.classList.add('done');
+      else if (i === n) li.classList.add('active');
+    }
+    document.getElementById('builderSub').textContent = 'Schritt ' + n + ' von 5';
+  }
+
+  function goStep(n) {
+    if (n >= 2 && !currentFunnel) { showToast('Bitte zuerst Funnel anlegen', 'error'); return; }
+    if (n >= 2) renderStep(n);
+    goStepUI(n);
+    if (n === 5) { setTimeout(loadPreview, 300); }
+  }
+
+  // ── Step 1: Create funnel ─────────────────────────────────────────────────
+  async function createFunnel() {
+    const customer_id = document.getElementById('newCustomer').value;
+    const campaign_id = document.getElementById('newCampaign').value;
+    const name = document.getElementById('newFunnelName').value.trim();
+    const template_id = document.getElementById('selectedTemplate').value;
+    if (!customer_id || !name || !template_id) {
+      showToast('Kunde, Name und Template wählen', 'error'); return;
+    }
+    try {
+      const res = await API.post('/api/admin/funnels', { customer_id, campaign_id: campaign_id || null, template_id, name });
+      currentFunnel = await API.get('/api/admin/funnels/' + res.id);
+      currentTemplate = await API.get('/api/admin/funnels/templates/' + template_id);
+      document.getElementById('builderTitle').textContent = name;
+      showToast('Funnel erstellt');
+      goStep(2);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ── Step 2: Dynamic fields ────────────────────────────────────────────────
+  function renderStep(n) {
+    if (!currentTemplate) return;
+    if (n === 2) renderFieldsStep();
+    if (n === 3) renderImageStep();
+    if (n === 4) renderTextStep();
+  }
+
+  function buildFieldInput(f, value) {
+    const val = value !== undefined ? value : '';
+    if (f.type === 'textarea') {
+      return `<textarea id="field_${f.key}" class="dynamic-field" placeholder="${f.placeholder||''}" rows="3">${val}</textarea>`;
+    }
+    return `<input type="${f.type||'text'}" id="field_${f.key}" class="dynamic-field" placeholder="${f.placeholder||''}" value="${val}">`;
+  }
+
+  function renderFieldsStep() {
+    const fields = currentFunnel.fields || {};
+    document.getElementById('step2TemplateName').textContent = currentTemplate.name;
+
+    document.getElementById('requiredFields').innerHTML = (currentTemplate.required_fields || []).map(f => `
+      <div class="dynamic-field">
+        <label>${f.label} <span class="required">*</span></label>
+        ${buildFieldInput(f, fields[f.key])}
+        ${f.placeholder ? `<div class="field-hint">${f.placeholder}</div>` : ''}
+      </div>
+    `).join('');
+
+    const optHtml = (currentTemplate.optional_fields || []).map(f => `
+      <div class="dynamic-field">
+        <label>${f.label}</label>
+        ${buildFieldInput(f, fields[f.key])}
+      </div>
+    `).join('');
+    document.getElementById('optionalFields').innerHTML = optHtml;
+    if (!optHtml) document.getElementById('optionalFieldsWrap').style.display = 'none';
+  }
+
+  async function saveFields() {
+    const fields = {};
+    (currentTemplate.required_fields || []).forEach(f => {
+      fields[f.key] = document.getElementById('field_' + f.key)?.value || '';
+    });
+    (currentTemplate.optional_fields || []).forEach(f => {
+      const v = document.getElementById('field_' + f.key)?.value;
+      if (v) fields[f.key] = v;
+    });
+    try {
+      await API.put('/api/admin/funnels/' + currentFunnel.id + '/data', { fields });
+      currentFunnel.fields = fields;
+      showToast('Daten gespeichert');
+      goStep(3);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ── Step 3: Image uploads ─────────────────────────────────────────────────
+  function renderImageStep() {
+    const imageSlots = currentFunnel.image_slots || {};
+    document.getElementById('imageSlotGrid').innerHTML = (currentTemplate.image_slots || []).map(slot => `
+      <div class="slot-card">
+        <h4>${slot.label} ${slot.required ? '<span class="required">*</span>' : '<span style="font-size:11px;color:#9ca3af">(optional)</span>'}</h4>
+        <p>${slot.description || ''}</p>
+        <div class="upload-zone" onclick="document.getElementById('upload_${slot.key}').click()">
+          ${imageSlots[slot.key]
+            ? `<img src="${imageSlots[slot.key]}" id="preview_${slot.key}"><div style="font-size:11px;color:#6b7280;margin-top:6px">Klicken zum Ändern</div>`
+            : `<div style="font-size:24px;margin-bottom:6px">&#128247;</div><div style="font-size:13px;color:#6b7280">Bild hochladen</div><div style="font-size:11px;color:#9ca3af">JPG, PNG bis 8MB</div>`
+          }
+        </div>
+        <input type="file" id="upload_${slot.key}" accept="image/*" style="display:none" onchange="uploadImage('${slot.key}', this)">
+      </div>
+    `).join('');
+  }
+
+  async function uploadImage(slotKey, input) {
+    if (!input.files[0]) return;
+    const fd = new FormData();
+    fd.append('image', input.files[0]);
+    fd.append('slot', slotKey);
+    try {
+      const res = await fetch('/api/admin/funnels/' + currentFunnel.id + '/upload-image', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + API.getToken() },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      currentFunnel.image_slots = currentFunnel.image_slots || {};
+      currentFunnel.image_slots[slotKey] = data.url;
+      showToast('Bild hochgeladen');
+      renderImageStep();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ── Step 4: Text slots ────────────────────────────────────────────────────
+  function renderTextStep() {
+    const textSlots = currentFunnel.text_slots || {};
+    document.getElementById('textSlotList').innerHTML = (currentTemplate.text_slots || []).map(s => {
+      const val = textSlots[s.key] || '';
+      const input = s.type === 'textarea' || (s.max_chars && s.max_chars > 80)
+        ? `<textarea id="ts_${s.key}" rows="3" oninput="updateCharCount('${s.key}',this.value,${s.max_chars||200})">${val}</textarea>`
+        : `<input type="text" id="ts_${s.key}" value="${val.replace(/"/g,'&quot;')}" oninput="updateCharCount('${s.key}',this.value,${s.max_chars||100})">`;
+      return `
+        <div class="text-slot-item">
+          <label>${s.label} ${s.ai_generated ? '<span class="ai-badge">&#129504; KI</span>' : ''}</label>
+          ${input}
+          <div class="char-count" id="cc_${s.key}">${val.length} / ${s.max_chars || 100}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function updateCharCount(key, val, max) {
+    const el = document.getElementById('cc_' + key);
+    if (el) { el.textContent = val.length + ' / ' + max; el.style.color = val.length > max ? '#dc2626' : '#9ca3af'; }
+  }
+
+  async function generateTexts() {
+    const btn = document.getElementById('btnGenerate');
+    btn.disabled = true; btn.textContent = '&#129504; KI generiert...';
+    try {
+      await saveFields();
+      const res = await API.post('/api/admin/funnels/' + currentFunnel.id + '/generate-texts', {});
+      currentFunnel.text_slots = res.text_slots;
+      renderTextStep();
+      showToast('Texte erfolgreich generiert');
+    } catch(e) { showToast(e.message, 'error'); }
+    finally { btn.disabled = false; btn.innerHTML = '&#129504; KI: Alle Texte generieren'; }
+  }
+
+  async function saveTexts() {
+    const text_slots = {};
+    (currentTemplate.text_slots || []).forEach(s => {
+      const el = document.getElementById('ts_' + s.key);
+      if (el) text_slots[s.key] = el.value;
+    });
+    try {
+      await API.put('/api/admin/funnels/' + currentFunnel.id + '/data', { fields: currentFunnel.fields, text_slots });
+      currentFunnel.text_slots = text_slots;
+      showToast('Texte gespeichert');
+      goStep(5);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ── Step 5: Preview + Publish ─────────────────────────────────────────────
+  async function loadPreview() {
+    const frame = document.getElementById('previewFrame');
+    try {
+      const res = await fetch('/api/admin/funnels/' + currentFunnel.id + '/preview', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + API.getToken(), 'Content-Type': 'application/json' },
+      });
+      const html = await res.text();
+      frame.srcdoc = html;
+    } catch(e) { showToast('Vorschau-Fehler: ' + e.message, 'error'); }
+  }
+
+  async function publishFunnel() {
+    const btn = document.getElementById('btnPublish');
+    btn.disabled = true; btn.textContent = 'Wird veröffentlicht...';
+    try {
+      const res = await API.post('/api/admin/funnels/' + currentFunnel.id + '/publish', {});
+      currentFunnel.slug = res.slug;
+      const base = window.location.origin;
+      const url = base + res.url;
+      document.getElementById('publishInfo').style.display = 'block';
+      document.getElementById('publishInfo').innerHTML = `
+        &#9989; <strong>Funnel veröffentlicht!</strong><br>
+        URL: <a href="${url}" target="_blank" style="color:var(--primary)">${url}</a>
+        <button onclick="navigator.clipboard.writeText('${url}');showToast('URL kopiert')" class="btn btn-sm btn-outline" style="margin-left:8px">&#128203; Kopieren</button>
+      `;
+      showToast('Funnel veröffentlicht');
+      loadPreview();
+    } catch(e) { showToast(e.message, 'error'); }
+    finally { btn.disabled = false; btn.innerHTML = '&#127919; Funnel veröffentlichen'; }
+  }
+
+  async function deleteFunnel(id, name) {
+    if (!confirm(`Funnel "${name}" löschen?`)) return;
+    try { await API.del('/api/admin/funnels/' + id); showToast('Funnel gelöscht'); loadFunnels(); }
+    catch(e) { showToast(e.message, 'error'); }
+  }
+
+  init();
+</script>
+</body>
+</html>

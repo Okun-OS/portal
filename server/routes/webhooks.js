@@ -150,6 +150,36 @@ router.post('/google-conversion', (req, res) => {
   }
 });
 
+// ── POST /api/webhooks/funnel-lead ────────────────────────────────────────────
+// Receives lead submissions from published funnel pages
+router.post('/funnel-lead', (req, res) => {
+  try {
+    const { name, email, phone, message, funnel_id, funnel_slug, customer_id, campaign_id } = req.body;
+
+    if (!customer_id) return res.status(400).json({ error: 'customer_id fehlt' });
+
+    const leadName = name || 'Unbekannt';
+
+    const result = db.prepare(`
+      INSERT INTO leads (customer_id, campaign_id, funnel_id, funnel_slug, name, email, phone, source, notes, status, quality)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'Funnel', ?, 'new', 'normal')
+    `).run(
+      customer_id,
+      campaign_id || null,
+      funnel_id || null,
+      funnel_slug || null,
+      leadName,
+      email || null,
+      phone || null,
+      message || null
+    );
+
+    res.status(201).json({ success: true, lead_id: result.lastInsertRowid });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/webhooks/leads – health check + instructions
 router.get('/leads', (req, res) => {
   const base = req.protocol + '://' + req.get('host');

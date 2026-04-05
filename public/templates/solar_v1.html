@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{headline}} – {{firmen_name}}</title>
+  <meta name="description" content="{{subheadline}}">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; background: #fff; }
+    .hero {
+      position: relative; min-height: 100vh;
+      display: flex; align-items: center;
+      background: linear-gradient(135deg, #065f46 0%, #059669 60%, #047857 100%);
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('{{hero_image}}');
+      background-size: cover; background-position: center; opacity: 0.2;
+    }
+    .hero-content {
+      position: relative; z-index: 1;
+      max-width: 1100px; margin: 0 auto; padding: 60px 24px;
+      display: grid; grid-template-columns: 1fr 420px; gap: 48px; align-items: center;
+    }
+    .hero-left { color: #fff; }
+    .hero-badge {
+      display: inline-block; background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff; font-size: 13px; font-weight: 600;
+      padding: 6px 16px; border-radius: 20px; margin-bottom: 20px;
+    }
+    .hero-headline { font-size: clamp(28px, 4vw, 48px); font-weight: 800; line-height: 1.15; margin-bottom: 16px; }
+    .hero-sub { font-size: 18px; color: rgba(255,255,255,0.85); line-height: 1.6; margin-bottom: 32px; }
+    .benefits-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .benefits-list li { display: flex; align-items: center; gap: 10px; font-size: 16px; color: rgba(255,255,255,0.92); font-weight: 500; }
+    .benefits-list li::before { content: '✓'; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: #fbbf24; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .form-card { background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); padding: 32px; }
+    .form-card h2 { font-size: 20px; font-weight: 700; color: #065f46; margin-bottom: 6px; text-align: center; }
+    .form-card .form-sub { font-size: 13px; color: #6b7280; text-align: center; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .form-group input, .form-group textarea { width: 100%; padding: 11px 14px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 14px; outline: none; background: #fafafa; }
+    .form-group input:focus, .form-group textarea:focus { border-color: #059669; background: #fff; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .btn-submit { width: 100%; padding: 14px; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; font-size: 16px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; margin-top: 4px; }
+    .btn-submit:hover { opacity: 0.9; }
+    .privacy-text { font-size: 11px; color: #9ca3af; text-align: center; margin-top: 10px; }
+    .form-success { display: none; text-align: center; padding: 20px 0; }
+    .form-success .success-icon { font-size: 48px; margin-bottom: 12px; }
+    .form-success h3 { font-size: 22px; color: #065f46; margin-bottom: 8px; }
+    .trust-section { background: #f0fdf4; padding: 64px 24px; }
+    .trust-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+    .trust-inner h2 { font-size: 30px; font-weight: 700; color: #065f46; margin-bottom: 12px; }
+    .trust-inner p { font-size: 17px; color: #4b5563; line-height: 1.7; max-width: 680px; margin: 0 auto 40px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .stat-item { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .stat-num { font-size: 36px; font-weight: 800; color: #065f46; }
+    .stat-label { font-size: 14px; color: #6b7280; margin-top: 4px; }
+    .logo-wrap { position: absolute; top: 20px; left: 24px; z-index: 10; }
+    .logo-wrap img { max-height: 48px; max-width: 160px; object-fit: contain; }
+    footer { background: #065f46; color: rgba(255,255,255,0.6); padding: 24px; text-align: center; font-size: 13px; }
+    footer a { color: rgba(255,255,255,0.6); }
+    @media (max-width: 768px) { .hero-content { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<section class="hero">
+  <div class="hero-bg"></div>
+  {{#if logo}}<div class="logo-wrap"><img src="{{logo}}" alt="{{firmen_name}}"></div>{{/if}}
+  <div class="hero-content">
+    <div class="hero-left">
+      <div class="hero-badge">&#9728; Solar · {{region}}</div>
+      <h1 class="hero-headline">{{headline}}</h1>
+      <p class="hero-sub">{{subheadline}}</p>
+      <ul class="benefits-list">
+        <li>{{benefit_1}}</li>
+        <li>{{benefit_2}}</li>
+        <li>{{benefit_3}}</li>
+      </ul>
+    </div>
+    <div class="form-card">
+      <h2>{{form_headline}}</h2>
+      <p class="form-sub">Kostenlos &amp; unverbindlich</p>
+      <div id="formWrap">
+        <form id="leadForm" onsubmit="submitLead(event)">
+          {{FORM_FIELDS}}
+          <button type="submit" class="btn-submit" id="btnSubmit">{{cta_text}}</button>
+          <p class="privacy-text">&#128274; {{privacy_text}}</p>
+        </form>
+      </div>
+      <div class="form-success" id="formSuccess">
+        <div class="success-icon">&#127774;</div>
+        <h3>{{danke_headline}}</h3>
+        <p>{{danke_text}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="trust-section">
+  <div class="trust-inner">
+    <h2>Warum {{firmen_name}}?</h2>
+    <p>{{vertrauen_text}}</p>
+    <div class="stats-grid">
+      {{#if installierte_anlagen}}<div class="stat-item"><div class="stat-num">{{installierte_anlagen}}+</div><div class="stat-label">Installierte Anlagen</div></div>{{/if}}
+      {{#if garantie_jahre}}<div class="stat-item"><div class="stat-num">{{garantie_jahre}} Jahre</div><div class="stat-label">Garantie</div></div>{{/if}}
+      <div class="stat-item"><div class="stat-num">100%</div><div class="stat-label">Kundenzufriedenheit</div></div>
+    </div>
+  </div>
+</section>
+<footer>
+  &copy; {{firmen_name}} · {{region}}
+  {{#if website_url}}&nbsp;·&nbsp;<a href="{{website_url}}">Website</a>{{/if}}
+  &nbsp;·&nbsp;<a href="#">Datenschutz</a> &nbsp;·&nbsp; <a href="#">Impressum</a>
+</footer>
+<script>
+  async function submitLead(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true; btn.textContent = 'Wird gesendet...';
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    data.funnel_id = '{{FUNNEL_ID}}'; data.funnel_slug = '{{FUNNEL_SLUG}}';
+    data.customer_id = '{{CUSTOMER_ID}}'; data.campaign_id = '{{CAMPAIGN_ID}}';
+    try {
+      const res = await fetch('/api/webhooks/funnel-lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      if (!res.ok) throw new Error();
+      document.getElementById('formWrap').style.display = 'none';
+      document.getElementById('formSuccess').style.display = 'block';
+    } catch {
+      btn.disabled = false; btn.textContent = '{{cta_text}}';
+      alert('Fehler. Bitte erneut versuchen.');
+    }
+  }
+</script>
+</body>
+</html>

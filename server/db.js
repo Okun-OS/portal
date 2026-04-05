@@ -195,11 +195,32 @@ function initializeDatabase() {
 
 initializeDatabase();
 
+// Funnels table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS funnels (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id  INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    campaign_id  INTEGER REFERENCES campaigns(id) ON DELETE SET NULL,
+    template_id  TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    slug         TEXT UNIQUE,
+    status       TEXT NOT NULL DEFAULT 'draft',  -- 'draft' | 'published'
+    fields       TEXT NOT NULL DEFAULT '{}',     -- JSON: all filled data fields
+    text_slots   TEXT NOT NULL DEFAULT '{}',     -- JSON: AI-generated texts
+    image_slots  TEXT NOT NULL DEFAULT '{}',     -- JSON: uploaded image paths
+    published_at TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 // Safe migrations – add columns if they don't exist yet
 const migrations = [
   'ALTER TABLE campaigns ADD COLUMN target_audience TEXT',
   'ALTER TABLE campaigns ADD COLUMN meta_campaign_id TEXT',
   'ALTER TABLE campaigns ADD COLUMN google_campaign_id TEXT',
+  'ALTER TABLE leads ADD COLUMN funnel_id INTEGER REFERENCES funnels(id) ON DELETE SET NULL',
+  'ALTER TABLE leads ADD COLUMN funnel_slug TEXT',
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch { /* column already exists */ }
