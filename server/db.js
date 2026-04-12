@@ -214,6 +214,26 @@ db.exec(`
   );
 `);
 
+// Custom templates uploaded by admin (Framer exports, etc.)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS custom_templates (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id     TEXT    UNIQUE NOT NULL,
+    name            TEXT    NOT NULL,
+    category        TEXT    NOT NULL DEFAULT 'Custom',
+    description     TEXT,
+    html_content    TEXT    NOT NULL,
+    required_fields TEXT    NOT NULL DEFAULT '[]',
+    optional_fields TEXT    NOT NULL DEFAULT '[]',
+    image_slots     TEXT    NOT NULL DEFAULT '[]',
+    text_slots      TEXT    NOT NULL DEFAULT '[]',
+    form_definition TEXT    NOT NULL DEFAULT '{}',
+    thank_you_page  TEXT    NOT NULL DEFAULT '{}',
+    ai_prompt_hint  TEXT,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 // Safe migrations – add columns if they don't exist yet
 const migrations = [
   'ALTER TABLE campaigns ADD COLUMN target_audience TEXT',

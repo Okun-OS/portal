@@ -130,23 +130,54 @@ const TEMPLATES = {
 
 };
 
+const db = require('./db');
+
 /**
- * Get all templates as array (for listing)
+ * Get all templates as array (static + DB custom templates)
  */
 function getAllTemplates() {
-  return Object.values(TEMPLATES).map(t => ({
+  const staticList = Object.values(TEMPLATES).map(t => ({
     template_id: t.template_id,
     name: t.name,
     description: t.description,
     category: t.category,
+    source: 'builtin',
   }));
+
+  let customList = [];
+  try {
+    customList = db.prepare('SELECT template_id, name, description, category FROM custom_templates ORDER BY created_at DESC').all()
+      .map(t => ({ ...t, source: 'custom' }));
+  } catch { /* table may not exist yet */ }
+
+  return [...staticList, ...customList];
 }
 
 /**
- * Get a single template by ID
+ * Get a single template by ID (static first, then DB)
  */
 function getTemplate(template_id) {
-  return TEMPLATES[template_id] || null;
+  if (TEMPLATES[template_id]) return TEMPLATES[template_id];
+
+  try {
+    const row = db.prepare('SELECT * FROM custom_templates WHERE template_id = ?').get(template_id);
+    if (!row) return null;
+    return {
+      template_id: row.template_id,
+      name: row.name,
+      category: row.category,
+      description: row.description,
+      html_content: row.html_content,  // used by renderTemplate for DB templates
+      required_fields: JSON.parse(row.required_fields || '[]'),
+      optional_fields: JSON.parse(row.optional_fields || '[]'),
+      image_slots: JSON.parse(row.image_slots || '[]'),
+      text_slots: JSON.parse(row.text_slots || '[]'),
+      form_definition: JSON.parse(row.form_definition || '{}'),
+      thank_you_page: JSON.parse(row.thank_you_page || '{}'),
+      ai_prompt_hint: row.ai_prompt_hint || '',
+      source: 'custom',
+    };
+  } catch { return null; }
 }
 
 module.exports = { getAllTemplates, getTemplate, TEMPLATES };

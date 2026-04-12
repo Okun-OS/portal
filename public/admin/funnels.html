@@ -47,6 +47,14 @@
     .preview-frame { width:100%; height:600px; border:1px solid #e5e7eb; border-radius:10px; }
     .section-title { font-size:16px; font-weight:700; color:#1f2937; margin-bottom:4px; }
     .section-sub { font-size:13px; color:#6b7280; margin-bottom:20px; }
+    .ph-row { display:flex; align-items:center; gap:10px; padding:10px 12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:6px; }
+    .ph-key { font-family:monospace; font-size:13px; font-weight:700; color:#6d28d9; min-width:160px; }
+    .ph-select { flex:1; padding:6px 10px; border:1.5px solid #d1d5db; border-radius:6px; font-size:13px; }
+    .ph-select:focus { border-color:var(--primary); outline:none; }
+    .custom-tpl-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f3f4f6; }
+    .custom-tpl-row:last-child { border-bottom:none; }
+    .alert { padding:12px 16px; border-radius:8px; font-size:13px; }
+    .alert-info { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
   </style>
 </head>
 <body>
@@ -81,7 +89,10 @@
   <main class="main-content">
     <div class="page-header">
       <h1 class="page-title">&#127915; Funnels</h1>
-      <button class="btn btn-primary" onclick="openBuilder()">&#43; Neuer Funnel</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" onclick="openImport()">&#8679; Template importieren</button>
+        <button class="btn btn-primary" onclick="openBuilder()">&#43; Neuer Funnel</button>
+      </div>
     </div>
     <div class="page-body">
 
@@ -227,6 +238,92 @@
             </div>
           </div>
         </div>
+
+      <!-- TEMPLATE IMPORT -->
+      <div id="viewImport" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div>
+            <div class="section-title">Template importieren</div>
+            <div class="section-sub">Framer-Export oder eigene HTML-Datei als wiederverwendbares Template speichern</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="closeImport()">&#8592; Zurück zur Liste</button>
+        </div>
+
+        <!-- Step A: Upload -->
+        <div id="importStepA">
+          <div class="card mb-4">
+            <div class="card-header"><span class="card-title">&#8679; Schritt 1: HTML-Datei hochladen</span></div>
+            <div class="card-body">
+              <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;color:#166534">
+                <strong>Framer-Export:</strong> Öffne dein Projekt in Framer → rechts oben <strong>&#8942;</strong> → <strong>Export → Export to HTML</strong> → ZIP entpacken → die <code>index.html</code> hochladen.
+              </div>
+              <div class="upload-zone" id="htmlDropZone" onclick="document.getElementById('htmlFileInput').click()" style="padding:40px;text-align:center">
+                <div style="font-size:36px;margin-bottom:8px">&#128196;</div>
+                <div style="font-weight:600;margin-bottom:4px">HTML-Datei hochladen</div>
+                <div style="font-size:12px;color:#9ca3af">Klicken oder Datei hier ablegen · Max. 4 MB</div>
+                <div id="htmlFileName" style="margin-top:10px;font-size:13px;color:var(--primary);display:none"></div>
+              </div>
+              <input type="file" id="htmlFileInput" accept=".html,.htm" style="display:none" onchange="analyzeHtml(this)">
+              <div id="analyzeSpinner" style="display:none;text-align:center;padding:20px;color:#6b7280">Analysiere...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step B: Classify placeholders -->
+        <div id="importStepB" style="display:none">
+          <div class="card mb-4">
+            <div class="card-header">
+              <span class="card-title">&#128466; Schritt 2: Platzhalter klassifizieren</span>
+              <span class="text-sm text-muted" id="placeholderCount"></span>
+            </div>
+            <div class="card-body">
+              <div id="noPlaceholders" style="display:none" class="alert" style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:14px;font-size:13px;color:#854d0e;margin-bottom:16px">
+                <strong>Keine Platzhalter gefunden.</strong> Das Template hat keine <code>{{placeholder}}</code>-Marker. Das Template wird trotzdem gespeichert, aber ohne Personalisierung. Du kannst es nach dem Import in Framer mit Platzhaltern versehen und erneut hochladen.
+              </div>
+              <div id="hasFormFields" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin-bottom:16px;font-size:13px;color:#166534">
+                &#9989; <code>{{FORM_FIELDS}}</code> gefunden – das Lead-Formular wird automatisch eingefügt.
+              </div>
+              <div id="placeholderList" style="margin-bottom:20px"></div>
+
+              <div style="border-top:1px solid #e5e7eb;padding-top:20px;margin-top:4px">
+                <div class="section-title" style="font-size:14px;margin-bottom:14px">Template-Details</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Template-Name <span class="required">*</span></label>
+                    <input type="text" id="importName" class="form-control" placeholder="z.B. Makler Framer V1">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Kategorie</label>
+                    <input type="text" id="importCategory" class="form-control" placeholder="z.B. Immobilien, Solar, Custom">
+                  </div>
+                  <div class="form-group col-span-2">
+                    <label class="form-label">Beschreibung</label>
+                    <input type="text" id="importDescription" class="form-control" placeholder="Kurze Beschreibung des Templates">
+                  </div>
+                  <div class="form-group col-span-2">
+                    <label class="form-label">KI-Kontext-Hinweis</label>
+                    <textarea id="importAiHint" class="form-control" rows="2" placeholder="z.B. Immobilienmakler in {{stadt}}. Zielgruppe: {{zielgruppe}}. Erstelle überzeugende Texte."></textarea>
+                    <div class="form-hint">Wird als Kontext an die KI übergeben wenn Texte generiert werden. Verwende {{feldname}} für dynamische Werte.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button class="btn btn-secondary" onclick="resetImport()">&#8592; Andere Datei</button>
+                <button class="btn btn-primary" id="btnSaveTemplate" onclick="saveTemplate()">&#9989; Template speichern</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Existing custom templates -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">&#128218; Eigene Templates</span></div>
+          <div class="card-body" id="customTemplateList">
+            <div class="text-muted text-sm">Laden...</div>
+          </div>
+        </div>
+      </div>
 
       </div>
     </div>
@@ -571,6 +668,193 @@
     try { await API.del('/api/admin/funnels/' + id); showToast('Funnel gelöscht'); loadFunnels(); }
     catch(e) { showToast(e.message, 'error'); }
   }
+
+  // ── Template Import ───────────────────────────────────────────────────────
+  let importHtmlFile = null;
+  let importPlaceholders = [];
+
+  function openImport() {
+    document.getElementById('viewList').style.display = 'none';
+    document.getElementById('viewBuilder').style.display = 'none';
+    document.getElementById('viewImport').style.display = 'block';
+    loadCustomTemplates();
+    resetImport();
+  }
+
+  function closeImport() {
+    document.getElementById('viewImport').style.display = 'none';
+    document.getElementById('viewList').style.display = 'block';
+    loadFunnels();
+    // Refresh template grid with new templates
+    API.get('/api/admin/funnels/templates').then(t => { templates = t; renderTemplateGrid(); });
+  }
+
+  function resetImport() {
+    importHtmlFile = null;
+    importPlaceholders = [];
+    document.getElementById('importStepA').style.display = 'block';
+    document.getElementById('importStepB').style.display = 'none';
+    document.getElementById('htmlFileName').style.display = 'none';
+    document.getElementById('htmlFileInput').value = '';
+  }
+
+  async function analyzeHtml(input) {
+    if (!input.files[0]) return;
+    importHtmlFile = input.files[0];
+    document.getElementById('htmlFileName').textContent = importHtmlFile.name;
+    document.getElementById('htmlFileName').style.display = 'block';
+    document.getElementById('analyzeSpinner').style.display = 'block';
+
+    try {
+      const fd = new FormData();
+      fd.append('html', importHtmlFile);
+      const res = await fetch('/api/admin/funnels/import/analyze', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + API.getToken() },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      importPlaceholders = data.placeholders || [];
+      renderImportStep(data);
+    } catch(e) {
+      showToast('Analyse fehlgeschlagen: ' + e.message, 'error');
+    } finally {
+      document.getElementById('analyzeSpinner').style.display = 'none';
+    }
+  }
+
+  function renderImportStep(data) {
+    document.getElementById('importStepA').style.display = 'none';
+    document.getElementById('importStepB').style.display = 'block';
+    document.getElementById('placeholderCount').textContent =
+      data.placeholder_count + ' Platzhalter gefunden';
+
+    document.getElementById('noPlaceholders').style.display =
+      data.placeholder_count === 0 ? 'block' : 'none';
+    document.getElementById('hasFormFields').style.display =
+      data.has_form_fields ? 'block' : 'none';
+
+    const list = document.getElementById('placeholderList');
+    if (!data.placeholders.length) { list.innerHTML = ''; return; }
+
+    list.innerHTML = `
+      <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px">
+        Wähle für jeden Platzhalter den Typ:
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">
+        ${data.placeholders.map(p => `
+          <div class="ph-row">
+            <span class="ph-key">{{${p.key}}}</span>
+            <select class="ph-select" id="ph_${p.key}">
+              <option value="data_required" ${p.suggested_type === 'data' ? 'selected' : ''}>Datenfeld (Pflicht)</option>
+              <option value="data_optional">Datenfeld (Optional)</option>
+              <option value="text_ai" ${p.suggested_type === 'text_ai' ? 'selected' : ''}>KI-Text (auto)</option>
+              <option value="text_manual">Text (manuell)</option>
+              <option value="image" ${p.suggested_type === 'image' ? 'selected' : ''}>Bild-Slot</option>
+              <option value="ignore">Ignorieren</option>
+            </select>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  async function saveTemplate() {
+    const name = document.getElementById('importName').value.trim();
+    if (!name) { showToast('Template-Name eingeben', 'error'); return; }
+    if (!importHtmlFile) { showToast('Keine HTML-Datei', 'error'); return; }
+
+    const classifications = {};
+    importPlaceholders.forEach(p => {
+      const el = document.getElementById('ph_' + p.key);
+      if (el) classifications[p.key] = el.value;
+    });
+
+    const btn = document.getElementById('btnSaveTemplate');
+    btn.disabled = true; btn.textContent = 'Speichern...';
+
+    try {
+      const fd = new FormData();
+      fd.append('html', importHtmlFile);
+      fd.append('name', name);
+      fd.append('category', document.getElementById('importCategory').value || 'Custom');
+      fd.append('description', document.getElementById('importDescription').value || '');
+      fd.append('ai_prompt_hint', document.getElementById('importAiHint').value || '');
+      fd.append('classifications', JSON.stringify(classifications));
+
+      const res = await fetch('/api/admin/funnels/import/save', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + API.getToken() },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      showToast('Template "' + name + '" gespeichert');
+      resetImport();
+      loadCustomTemplates();
+      // Refresh templates for builder
+      templates = await API.get('/api/admin/funnels/templates');
+      renderTemplateGrid();
+    } catch(e) {
+      showToast(e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '✅ Template speichern';
+    }
+  }
+
+  async function loadCustomTemplates() {
+    try {
+      const list = await API.get('/api/admin/funnels/templates/custom');
+      const el = document.getElementById('customTemplateList');
+      if (!list.length) {
+        el.innerHTML = '<div class="text-muted text-sm">Noch keine eigenen Templates importiert.</div>';
+        return;
+      }
+      el.innerHTML = list.map(t => `
+        <div class="custom-tpl-row">
+          <div style="flex:1">
+            <strong style="font-size:14px">${t.name}</strong>
+            <span style="font-size:11px;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:20px;margin-left:8px">${t.category}</span>
+            ${t.description ? `<div class="text-sm text-muted" style="margin-top:2px">${t.description}</div>` : ''}
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">ID: ${t.template_id} · ${new Date(t.created_at).toLocaleDateString('de-DE')}</div>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="deleteCustomTemplate('${t.template_id}','${t.name}')">&#215; Löschen</button>
+        </div>
+      `).join('');
+    } catch(e) { /* ignore */ }
+  }
+
+  async function deleteCustomTemplate(template_id, name) {
+    if (!confirm(`Template "${name}" löschen? Bestehende Funnels die dieses Template nutzen werden davon nicht beeinflusst.`)) return;
+    try {
+      await API.del('/api/admin/funnels/templates/custom/' + template_id);
+      showToast('Template gelöscht');
+      loadCustomTemplates();
+      templates = await API.get('/api/admin/funnels/templates');
+      renderTemplateGrid();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // Drag & drop for HTML upload
+  document.addEventListener('DOMContentLoaded', () => {
+    const zone = document.getElementById('htmlDropZone');
+    if (!zone) return;
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--primary)'; });
+    zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.style.borderColor = '';
+      const file = e.dataTransfer.files[0];
+      if (file && (file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
+        const dt = new DataTransfer(); dt.items.add(file);
+        document.getElementById('htmlFileInput').files = dt.files;
+        analyzeHtml(document.getElementById('htmlFileInput'));
+      }
+    });
+  });
 
   init();
 </script>
