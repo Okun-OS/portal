@@ -67,6 +67,25 @@ const TEMPLATES = {
       text: 'Wir melden uns innerhalb von 24 Stunden bei Ihnen.',
     },
 
+    qualification_steps: [
+      {
+        field: 'intent',
+        question: 'Was möchten Sie tun?',
+        options: ['Immobilie verkaufen', 'Immobilie kaufen', 'Kostenlose Bewertung anfordern'],
+      },
+      {
+        field: 'property_type',
+        question: 'Um welche Art von Immobilie handelt es sich?',
+        options: ['Haus / Villa', 'Eigentumswohnung', 'Mehrfamilienhaus', 'Grundstück'],
+      },
+      {
+        field: 'timeline',
+        question: 'Wann soll es losgehen?',
+        subtitle: 'Das hilft uns, Ihnen optimal zu helfen.',
+        options: ['So schnell wie möglich', 'In 3–6 Monaten', 'In 6–12 Monaten', 'Noch unentschlossen'],
+      },
+    ],
+
     ai_prompt_hint: 'Immobilienmakler in {{stadt}}. Zielgruppe: {{zielgruppe}}. USP: {{usp}}. Erstelle überzeugende, seriöse Texte die Immobilienbesitzer ansprechen die verkaufen wollen.',
   },
 
@@ -124,6 +143,25 @@ const TEMPLATES = {
       headline: 'Vielen Dank!',
       text: 'Wir erstellen Ihr persönliches Angebot und melden uns in Kürze.',
     },
+
+    qualification_steps: [
+      {
+        field: 'property_type',
+        question: 'Welche Art von Objekt haben Sie?',
+        options: ['Einfamilienhaus', 'Doppelhaus / Reihenhaus', 'Mehrfamilienhaus', 'Gewerbegebäude'],
+      },
+      {
+        field: 'roof_type',
+        question: 'Wie ist Ihr Dach beschaffen?',
+        subtitle: 'Das beeinflusst die optimale Anlage.',
+        options: ['Schräges Dach (Satteldach)', 'Flachdach', 'Ich weiß es nicht'],
+      },
+      {
+        field: 'timeline',
+        question: 'Wann möchten Sie die Anlage installieren?',
+        options: ['So schnell wie möglich', 'In 3–6 Monaten', 'In 6–12 Monaten', 'Nur Angebot einholen'],
+      },
+    ],
 
     ai_prompt_hint: 'Solar-Unternehmen in {{region}}. Zielgruppe: {{zielgruppe}}. USP: {{usp}}. Erstelle überzeugende Texte die Eigenheimbesitzer ansprechen.',
   },
