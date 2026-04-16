@@ -108,8 +108,50 @@
           <div class="flow-step-num">4</div> KI-Optimierung
         </div>
         <div style="margin-left:auto;display:flex;gap:8px">
+          <div class="flow-step" id="step-planner" onclick="switchTool('planner')" style="font-size:12px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;border:1.5px solid #fcd34d">&#127775; Kampagnenplaner</div>
           <div class="flow-step" id="step-creatives" onclick="switchTool('creatives')" style="font-size:12px">&#128218; Creatives</div>
           <div class="flow-step" id="step-history" onclick="switchTool('history')" style="font-size:12px">&#128337; Verlauf</div>
+        </div>
+      </div>
+
+      <!-- === KAMPAGNENPLANER === -->
+      <div id="tool-planner" class="tool-section">
+        <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #fcd34d;border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:28px">&#127775;</span>
+          <div>
+            <div style="font-weight:700;font-size:15px;color:#92400e">Immobilienmakler Kampagnenplaner</div>
+            <div style="font-size:13px;color:#a16207">KI erstellt automatisch: Anzeigen · Template-Empfehlung · Meta & Google Struktur · Budgetverteilung · Umsetzungsplan</div>
+          </div>
+        </div>
+        <div class="ai-workspace">
+          <div class="card">
+            <div class="card-header"><span class="card-title">&#128205; Kampagnen-Setup</span></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Stadt / Region</label>
+                <input type="text" id="cpStadt" class="form-control" placeholder="z.B. München, Berlin Mitte, Hamburg Nord">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Monatliches Budget (€)</label>
+                <input type="number" id="cpBudget" class="form-control" placeholder="z.B. 2000">
+              </div>
+              <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:#15803d">
+                &#9989; Ziel: <strong>Eigentümer-Anfragen generieren</strong> &nbsp;|&nbsp; Templates werden automatisch aus der Datenbank geladen
+              </div>
+              <button class="btn btn-primary w-full" id="btnCampaignPlan" onclick="runCampaignPlanner()" style="background:linear-gradient(135deg,#d97706,#b45309);border-color:#b45309;font-size:15px;padding:12px">
+                &#127775; Kompletten Kampagnenplan erstellen
+              </button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">&#128202; Kampagnenplan</span><span id="cpSavedBadge" class="context-badge" style="display:none">&#9989; Creatives gespeichert</span></div>
+            <div class="card-body" id="plannerResult">
+              <div class="empty-state" style="padding:32px">
+                <div class="empty-state-icon">&#127775;</div>
+                <p>Stadt + Budget eingeben → KI erstellt den kompletten Plan inkl. Anzeigentexte, Template-Empfehlung, Meta & Google Struktur und Schritt-für-Schritt Umsetzung.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -538,17 +580,122 @@
   }
 
   function switchTool(name) {
-    const allSteps = ['strategy','adcopy','funnel','optimize','creatives','history','complete'];
     document.querySelectorAll('.tool-section').forEach(s => s.classList.remove('active'));
     document.getElementById('tool-' + name).classList.add('active');
-    // Update flow steps highlight
-    ['strategy','adcopy','funnel','optimize','creatives','history'].forEach(n => {
+    ['strategy','adcopy','funnel','optimize','creatives','history','planner'].forEach(n => {
       const el = document.getElementById('step-' + n);
       if (el) el.classList.toggle('active', n === name);
     });
     if (name === 'adcopy' || name === 'funnel' || name === 'optimize') fillFromContext();
     if (name === 'creatives') loadCreatives();
     if (name === 'history') loadHistory();
+  }
+
+  async function runCampaignPlanner() {
+    const stadt  = document.getElementById('cpStadt').value.trim();
+    const budget = document.getElementById('cpBudget').value.trim();
+    if (!stadt || !budget) return showToast('Bitte Stadt und Budget eingeben', 'error');
+
+    const btn = document.getElementById('btnCampaignPlan');
+    const resultEl = document.getElementById('plannerResult');
+    btn.disabled = true; btn.textContent = '⏳ KI plant Kampagne...';
+    resultEl.innerHTML = `<div class="ai-generating"><div class="ai-dot-pulse"><span></span><span></span><span></span></div>KI erstellt kompletten Kampagnenplan...</div>`;
+
+    try {
+      const customerId = document.getElementById('aiCustomer').value || null;
+      const campaignId = document.getElementById('aiCampaign').value || null;
+      const plan = await API.post('/api/admin/ai/campaign-planner', { stadt, budget: Number(budget), customer_id: customerId, campaign_id: campaignId });
+
+      if (customerId) { document.getElementById('cpSavedBadge').style.display = 'inline-flex'; }
+
+      // Render plan
+      const creatives = (plan.ad_creatives || []).map((c, i) => `
+        <div style="background:#f8fafc;border:1px solid var(--gray-200);border-radius:10px;padding:14px;margin-bottom:10px">
+          <div style="font-weight:700;font-size:13px;color:#1e40af;margin-bottom:6px">Anzeige ${i+1} · ${c.cta}</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px">${c.headline}</div>
+          <div style="font-size:13px;color:var(--gray-600);line-height:1.6">${c.primary_text}</div>
+        </div>`).join('');
+
+      const tpl = plan.template_recommendation || {};
+      const meta = plan.meta_campaign || {};
+      const google = plan.google_campaign || {};
+      const budget_alloc = plan.budget_allocation || {};
+      const steps = (plan.implementation_steps || []).map((s, i) =>
+        `<div style="display:flex;gap:12px;margin-bottom:10px;align-items:flex-start">
+          <div style="min-width:28px;height:28px;background:#2563eb;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">${s.step || i+1}</div>
+          <div><div style="font-weight:600;font-size:13px">${s.title} <span style="font-size:11px;color:var(--gray-400)">${s.timeframe || ''}</span></div><div style="font-size:13px;color:var(--gray-600)">${s.description}</div></div>
+        </div>`).join('');
+
+      const adSets = (meta.ad_sets || []).map(a =>
+        `<div style="font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
+          <strong>${a.name}</strong> · ${a.targeting} · <strong>${a.budget_eur}€</strong>
+        </div>`).join('');
+
+      const keywords = (google.keywords || []).map(k => `<span style="background:#eff6ff;color:#1e40af;padding:3px 8px;border-radius:4px;font-size:12px;margin:2px">${k}</span>`).join('');
+
+      resultEl.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:20px">
+
+          <div>
+            <div style="font-weight:700;font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+              ✦ Template-Empfehlung
+              <a href="/admin/funnels.html" style="font-size:12px;background:#eff6ff;color:#1e40af;padding:3px 10px;border-radius:6px;text-decoration:none">→ Funnel erstellen</a>
+            </div>
+            <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px">
+              <div style="font-weight:700;color:#15803d">${tpl.template_name || tpl.template_id}</div>
+              <div style="font-size:13px;color:#166534;margin-top:4px">${tpl.reason || ''}</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-weight:700;font-size:14px;margin-bottom:10px">📣 Anzeigen-Creatives (${(plan.ad_creatives||[]).length}${customerId ? ' · automatisch gespeichert' : ''})</div>
+            ${creatives}
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:10px">📘 Meta Ads</div>
+              <div style="background:#f8fafc;border-radius:10px;padding:14px;font-size:13px">
+                <div><strong>Ziel:</strong> ${meta.objective || ''}</div>
+                <div style="margin:6px 0"><strong>Zielgruppe:</strong> ${meta.audience_description || ''}</div>
+                <div style="margin-top:8px">${adSets}</div>
+                <div style="margin-top:8px;font-weight:600">Gesamt: ${meta.total_budget_eur || budget_alloc.meta_eur || '?'}€/Monat</div>
+              </div>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:10px">🔍 Google Ads</div>
+              <div style="background:#f8fafc;border-radius:10px;padding:14px;font-size:13px">
+                <div><strong>Typ:</strong> ${google.campaign_type || 'Search'}</div>
+                <div style="margin:6px 0"><strong>Struktur:</strong> ${google.structure || ''}</div>
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${keywords}</div>
+                <div style="margin-top:8px;font-weight:600">Gesamt: ${google.total_budget_eur || budget_alloc.google_eur || '?'}€/Monat</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-weight:700;font-size:14px;margin-bottom:10px">💰 Budgetverteilung (${budget}€ gesamt)</div>
+            <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:14px;font-size:13px">
+              <div style="display:flex;gap:20px;margin-bottom:8px">
+                <div>📘 Meta: <strong>${budget_alloc.meta_eur || '?'}€</strong></div>
+                <div>🔍 Google: <strong>${budget_alloc.google_eur || '?'}€</strong></div>
+                <div>🔒 Reserve: <strong>${budget_alloc.reserve_eur || '?'}€</strong></div>
+              </div>
+              <div style="color:#a16207">${budget_alloc.reasoning || ''}</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-weight:700;font-size:14px;margin-bottom:10px">🗓 Umsetzungsplan</div>
+            ${steps}
+          </div>
+
+        </div>`;
+    } catch(e) {
+      resultEl.innerHTML = `<div class="empty-state"><p style="color:red">Fehler: ${e.message}</p></div>`;
+    } finally {
+      btn.disabled = false; btn.textContent = '✦ Kompletten Kampagnenplan erstellen';
+    }
   }
 
   function goToModule(name) {

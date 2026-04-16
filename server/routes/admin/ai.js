@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../../db');
 const { requireAdmin } = require('../../middleware/auth');
 const ai = require('../../services/ai');
+const { getAllTemplates } = require('../../funnelTemplates');
 
 // POST /api/admin/ai/strategy
 router.post('/strategy', requireAdmin, async (req, res) => {
@@ -112,6 +113,50 @@ router.post('/complete-campaign', requireAdmin, async (req, res) => {
     }
 
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/ai/campaign-planner
+router.post('/campaign-planner', requireAdmin, async (req, res) => {
+  const { customer_id, campaign_id, stadt, budget } = req.body;
+  if (!stadt || !budget) return res.status(400).json({ error: 'stadt und budget erforderlich' });
+
+  // Build template descriptions dynamically from DB + static registry
+  const templates = getAllTemplates();
+  const templateDescriptions = templates.map(t =>
+    `- template_id: "${t.template_id}" | Name: "${t.name}" | Kategorie: ${t.category} | ${t.description || ''}`
+  ).join('\n');
+
+  try {
+    const plan = await ai.generateCampaignPlan({ stadt, budget: Number(budget), templateDescriptions });
+
+    // Auto-save ad creatives to DB
+    if (customer_id && plan.ad_creatives && Array.isArray(plan.ad_creatives)) {
+      const insert = db.prepare(`
+        INSERT INTO ad_creatives (customer_id, campaign_id, type, title, content, status, source)
+        VALUES (?, ?, ?, ?, ?, 'draft', 'ai')
+      `);
+      for (const creative of plan.ad_creatives) {
+        const content = `Primary Text:\n${creative.primary_text}\n\nCTA: ${creative.cta}`;
+        insert.run(customer_id, campaign_id || null, 'headline', creative.headline, content);
+      }
+    }
+
+    // Save full plan as ai_analysis
+    if (customer_id) {
+      db.prepare(`
+        INSERT INTO ai_analyses (customer_id, campaign_id, type, prompt_data, result, created_by)
+        VALUES (?, ?, 'strategy', ?, ?, ?)
+      `).run(customer_id, campaign_id || null,
+        JSON.stringify({ stadt, budget }),
+        JSON.stringify(plan),
+        req.user.name
+      );
+    }
+
+    res.json(plan);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -321,4 +321,70 @@ Schreibe eine kurze, positive und motivierende Erklärung für den Kunden.`;
   return generate(system, prompt);
 }
 
-module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient };
+// 7. Immobilienmakler Campaign Planner – full structured plan
+async function generateCampaignPlan({ stadt, budget, templateDescriptions }) {
+  const system = `Du bist ein Performance Marketing System für Immobilienmakler.
+Deine Aufgabe ist es, basierend auf den gegebenen Informationen eine komplette
+Leadgenerierungs-Kampagne zu erstellen. Antworte AUSSCHLIESSLICH mit gültigem JSON –
+kein Text außerhalb des JSON-Blocks.`;
+
+  const prompt = `Erstelle eine vollständige Leadgenerierungs-Kampagne für einen Immobilienmakler.
+
+INPUT:
+- Stadt: ${stadt}
+- Budget: ${budget}€/Monat
+- Ziel: Eigentümer-Anfragen generieren
+
+Verfügbare Templates:
+${templateDescriptions}
+
+Antworte NUR mit diesem JSON (keine Erklärungen außerhalb):
+{
+  "ad_creatives": [
+    {
+      "headline": "max 40 Zeichen",
+      "primary_text": "2-4 Sätze Anzeigentext",
+      "cta": "Button-Text z.B. Mehr erfahren"
+    }
+  ],
+  "template_recommendation": {
+    "template_id": "eine der template_ids aus der Liste",
+    "template_name": "Name des Templates",
+    "reason": "Kurze Begründung warum dieses Template"
+  },
+  "meta_campaign": {
+    "objective": "Kampagnenziel",
+    "audience_description": "Zielgruppenbeschreibung",
+    "ad_sets": [
+      { "name": "Ad Set Name", "targeting": "Targeting-Details", "budget_eur": 0 }
+    ],
+    "total_budget_eur": 0
+  },
+  "google_campaign": {
+    "keywords": ["keyword1", "keyword2"],
+    "campaign_type": "Search",
+    "structure": "Kampagnenstruktur Beschreibung",
+    "total_budget_eur": 0
+  },
+  "budget_allocation": {
+    "meta_eur": 0,
+    "google_eur": 0,
+    "reserve_eur": 0,
+    "reasoning": "Begründung der Aufteilung"
+  },
+  "implementation_steps": [
+    { "step": 1, "title": "Schritt-Titel", "description": "Details", "timeframe": "Tag/Woche X" }
+  ]
+}
+
+Erstelle 4 verschiedene Anzeigen-Varianten (ad_creatives).
+Budget-Aufteilung muss genau ${budget}€ ergeben (meta + google + reserve = ${budget}).
+Alle Texte auf Deutsch. Fokus auf Conversion und Eigentümer-Leads.`;
+
+  const raw = await generate(system, prompt, 3000);
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('KI hat kein gültiges JSON zurückgegeben');
+  return JSON.parse(match[0]);
+}
+
+module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient, generateCampaignPlan };
