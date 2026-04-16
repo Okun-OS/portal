@@ -5,6 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin – Kampagnen</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .wizard-bar { display:flex; align-items:flex-start; margin-bottom:28px; }
+    .wizard-step { display:flex; flex-direction:column; align-items:center; min-width:72px; }
+    .wizard-step-dot { width:32px; height:32px; border-radius:50%; border:2px solid #d1d5db; background:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#9ca3af; transition:all 0.2s; }
+    .wizard-step.active .wizard-step-dot { border-color:var(--primary); background:var(--primary); color:#fff; }
+    .wizard-step.done .wizard-step-dot { border-color:#16a34a; background:#16a34a; color:#fff; }
+    .wizard-step-label { font-size:11px; color:#9ca3af; margin-top:5px; text-align:center; }
+    .wizard-step.active .wizard-step-label { color:var(--primary); font-weight:600; }
+    .wizard-step.done .wizard-step-label { color:#16a34a; }
+    .wizard-line { flex:1; height:2px; background:#e5e7eb; margin-top:15px; transition:background 0.3s; }
+    .wizard-line.done { background:#16a34a; }
+    .wizard-panel { display:none; }
+    .wizard-panel.active { display:block; }
+    .wizard-actions { display:flex; gap:10px; margin-top:20px; }
+    .launch-card { border-radius:12px; padding:20px 24px; color:#fff; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .launch-card-ai { background:linear-gradient(135deg,#6366f1,#8b5cf6); }
+    .launch-card-funnel { background:linear-gradient(135deg,#0ea5e9,#06b6d4); }
+    .launch-card-creative { background:linear-gradient(135deg,#f59e0b,#ef4444); }
+    .launch-card h3 { margin:0 0 4px; font-size:15px; font-weight:700; }
+    .launch-card p { margin:0; font-size:13px; opacity:0.9; }
+    .launch-btn { background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.6); color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+    .launch-btn:hover { background:rgba(255,255,255,0.35); }
+    .mini-item { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:7px; margin-bottom:6px; font-size:13px; }
+    .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+    .kpi-box { background:#f9fafb; border-radius:8px; padding:12px; text-align:center; }
+    .kpi-box .val { font-size:22px; font-weight:700; }
+    .kpi-box .lbl { font-size:11px; color:#6b7280; margin-bottom:2px; }
+    .wiz-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:#6b7280; margin-bottom:4px; }
+    .wiz-breadcrumb a { color:#6b7280; text-decoration:none; }
+    .wiz-breadcrumb a:hover { color:var(--primary); }
+    #viewWizard { max-width:820px; }
+  </style>
 </head>
 <body>
 <div class="app-layout">
@@ -34,9 +66,10 @@
   </aside>
 
   <main class="main-content">
+    <div id="viewList">
     <div class="page-header">
       <h1 class="page-title">Kampagnen</h1>
-      <button class="btn btn-primary" onclick="openNewCampaign()">&#43; Neue Kampagne</button>
+      <button class="btn btn-primary" onclick="openNewWizard(null)">&#43; Neue Kampagne</button>
     </div>
     <div class="page-body">
       <div class="card mb-4">
@@ -54,6 +87,188 @@
         <div class="loading-overlay">Laden...</div>
       </div>
     </div>
+    </div><!-- /viewList -->
+
+    <div id="viewWizard" style="display:none">
+      <div class="page-header" style="margin-bottom:8px">
+        <div>
+          <div class="wiz-breadcrumb">
+            <a href="#" onclick="backToList();return false">&#128202; Kampagnen</a>
+            <span>/</span>
+            <span id="wizardBreadcrumbName">Neue Kampagne</span>
+          </div>
+          <h1 class="page-title" id="wizardTitle">Neue Kampagne</h1>
+          <div class="text-sm text-muted" id="wizardSubtitle"></div>
+        </div>
+      </div>
+
+      <div class="wizard-bar">
+        <div class="wizard-step active" id="wstep-1">
+          <div class="wizard-step-dot">1</div>
+          <div class="wizard-step-label">Setup</div>
+        </div>
+        <div class="wizard-line" id="wline-12"></div>
+        <div class="wizard-step" id="wstep-2">
+          <div class="wizard-step-dot">2</div>
+          <div class="wizard-step-label">KI Planer</div>
+        </div>
+        <div class="wizard-line" id="wline-23"></div>
+        <div class="wizard-step" id="wstep-3">
+          <div class="wizard-step-dot">3</div>
+          <div class="wizard-step-label">Funnel</div>
+        </div>
+        <div class="wizard-line" id="wline-34"></div>
+        <div class="wizard-step" id="wstep-4">
+          <div class="wizard-step-dot">4</div>
+          <div class="wizard-step-label">Creatives</div>
+        </div>
+        <div class="wizard-line" id="wline-45"></div>
+        <div class="wizard-step" id="wstep-5">
+          <div class="wizard-step-dot">5</div>
+          <div class="wizard-step-label">Performance</div>
+        </div>
+      </div>
+
+      <!-- Step 1: Setup -->
+      <div class="wizard-panel active" id="step-panel-1">
+        <div class="card">
+          <div class="card-header"><h3 style="margin:0;font-size:15px">&#9965; Kampagne einrichten</h3></div>
+          <div class="card-body">
+            <input type="hidden" id="wCampaignId">
+            <div class="form-group" id="wCustomerGroup">
+              <label class="form-label">Kunde <span class="required">*</span></label>
+              <select id="wCustomer" class="form-control"><option value="">-- Kunde wählen --</option></select>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Kampagnenname <span class="required">*</span></label>
+                <input type="text" id="wName" class="form-control" placeholder="z.B. Google Leads Q2">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Plattform</label>
+                <select id="wPlatform" class="form-control">
+                  <option value="">-- Auswählen --</option>
+                  <option value="Google">Google Ads</option>
+                  <option value="Facebook">Facebook / Instagram</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                  <option value="Sonstiges">Sonstiges</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Budget/Monat (€)</label>
+                <input type="number" id="wBudget" class="form-control" placeholder="z.B. 1000" min="0" step="10">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select id="wStatus" class="form-control">
+                  <option value="active">Aktiv</option>
+                  <option value="paused">Pausiert</option>
+                  <option value="ended">Beendet</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Startdatum</label>
+                <input type="date" id="wStart" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Enddatum</label>
+                <input type="date" id="wEnd" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Google Ads Campaign ID</label>
+                <input type="text" id="wGoogleId" class="form-control" placeholder="z.B. 12345678">
+                <div class="form-hint">Aus Google Ads URL: campaignId=XXXXXXXX</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Meta Campaign ID</label>
+                <input type="text" id="wMetaId" class="form-control" placeholder="z.B. 120200123456789">
+                <div class="form-hint">Aus Meta Ads Manager – Kampagnen-ID</div>
+              </div>
+              <div class="form-group col-span-2">
+                <label class="form-label">Zielgruppe</label>
+                <input type="text" id="wTarget" class="form-control" placeholder="z.B. Hausbesitzer 45+, Region XY">
+              </div>
+              <div class="form-group col-span-2">
+                <label class="form-label">Beschreibung</label>
+                <textarea id="wDesc" class="form-control" rows="2" placeholder="Interne Notizen..."></textarea>
+              </div>
+            </div>
+            <div id="wFormError" class="form-error"></div>
+          </div>
+        </div>
+        <div class="wizard-actions">
+          <button class="btn btn-secondary" onclick="backToList()">&#8592; Übersicht</button>
+          <button class="btn btn-primary" onclick="saveWizardSetup()">&#10003; Speichern &amp; Weiter &#8594;</button>
+        </div>
+      </div>
+
+      <!-- Step 2: KI Planer -->
+      <div class="wizard-panel" id="step-panel-2">
+        <div class="launch-card launch-card-ai">
+          <div>
+            <h3>&#129504; KI Kampagnenplaner</h3>
+            <p>Kampagnenstrategie, Zielgruppen-Analyse und Ad-Copy mit KI erstellen.</p>
+          </div>
+          <button class="launch-btn" onclick="openKIPlaner()">Planer öffnen &#8599;</button>
+        </div>
+        <div class="card">
+          <div class="card-body" id="wizardContextInfo" style="font-size:13px;color:#374151"></div>
+        </div>
+        <div class="wizard-actions">
+          <button class="btn btn-secondary" onclick="goStep(1)">&#8592; Setup</button>
+          <button class="btn btn-primary" onclick="goStep(3)">Weiter: Funnel &#8594;</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Funnel -->
+      <div class="wizard-panel" id="step-panel-3">
+        <div class="launch-card launch-card-funnel">
+          <div>
+            <h3>&#127915; Funnel Builder</h3>
+            <p>Landing Pages und Lead-Funnels für diese Kampagne erstellen und verwalten.</p>
+          </div>
+          <button class="launch-btn" onclick="location.href='/admin/funnels.html'">Funnel Builder öffnen &#8599;</button>
+        </div>
+        <div style="margin-top:4px">
+          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px">&#128196; Bestehende Funnels dieses Kunden</div>
+          <div id="wizardFunnelList"><div class="text-muted text-sm">Laden...</div></div>
+        </div>
+        <div class="wizard-actions">
+          <button class="btn btn-secondary" onclick="goStep(2)">&#8592; KI Planer</button>
+          <button class="btn btn-primary" onclick="goStep(4)">Weiter: Creatives &#8594;</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Creatives -->
+      <div class="wizard-panel" id="step-panel-4">
+        <div class="launch-card launch-card-creative">
+          <div>
+            <h3>&#127912; Creative Studio</h3>
+            <p>Hooks, Headlines, Anzeigentexte und CTAs mit KI für diese Kampagne erstellen.</p>
+          </div>
+          <button class="launch-btn" onclick="openCreativeStudio()">Creative Studio öffnen &#8599;</button>
+        </div>
+        <div style="margin-top:4px">
+          <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px">&#127912; Gespeicherte Creatives</div>
+          <div id="wizardCreativesList"><div class="text-muted text-sm">Laden...</div></div>
+        </div>
+        <div class="wizard-actions">
+          <button class="btn btn-secondary" onclick="goStep(3)">&#8592; Funnel</button>
+          <button class="btn btn-primary" onclick="goStep(5)">Weiter: Performance &#8594;</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Performance -->
+      <div class="wizard-panel" id="step-panel-5">
+        <div id="wizardPerfContent"><div class="text-muted text-sm">Laden...</div></div>
+        <div class="wizard-actions">
+          <button class="btn btn-secondary" onclick="goStep(4)">&#8592; Creatives</button>
+          <button class="btn btn-primary" onclick="backToList()">&#128202; Zur Übersicht</button>
+        </div>
+      </div>
+
+    </div><!-- /viewWizard -->
   </main>
 </div>
 
@@ -138,17 +353,24 @@
   initNav('campaigns');
 
   let customers = [];
+  let wizardCampaign = null;
+  let wizardStep = 1;
 
   async function init() {
     customers = await API.get('/api/admin/customers');
     customers.forEach(c => {
-      ['cCustomer','filterCustomer'].forEach(id => {
+      ['cCustomer', 'filterCustomer', 'wCustomer'].forEach(id => {
         const opt = document.createElement('option');
         opt.value = c.id; opt.textContent = c.company_name;
         document.getElementById(id).appendChild(opt);
       });
     });
-    loadCampaigns();
+    const params = new URLSearchParams(location.search);
+    const urlId = params.get('id');
+    const urlCustomerId = params.get('customerId');
+    if (urlId) openWizardById(parseInt(urlId));
+    else if (urlCustomerId) openNewWizard(parseInt(urlCustomerId));
+    else loadCampaigns();
   }
 
   async function loadCampaigns() {
@@ -178,7 +400,6 @@
             </div>
             <div style="display:flex;align-items:center;gap:8px">
               ${statusBadge(c.status)}
-              <button class="btn btn-sm btn-secondary" onclick="editCampaign(${c.id})">&#9998;</button>
               <button class="btn btn-sm btn-danger" onclick="deleteCampaign(${c.id},'${c.name}')">&#215;</button>
             </div>
           </div>
@@ -191,7 +412,9 @@
             </div>
             ${c.platform ? `<div class="text-sm text-muted">Plattform: ${c.platform}</div>` : ''}
             ${c.start_date ? `<div class="text-sm text-muted">Start: ${formatDate(c.start_date)}</div>` : ''}
-            ${c.description ? `<div class="text-sm" style="margin-top:8px;color:var(--gray-600)">${c.description}</div>` : ''}
+          </div>
+          <div style="padding:0 16px 14px">
+            <button class="btn btn-sm btn-primary" style="width:100%" onclick="openWizardById(${c.id})">&#128202; Im Wizard öffnen</button>
           </div>
         </div>
       `;
@@ -258,6 +481,222 @@
       showToast('Kampagne gelöscht');
       loadCampaigns();
     } catch(e) { showToast(e.message,'error'); }
+  }
+
+  // ── Wizard: Open / Close ─────────────────────────────────────────────────
+  function openNewWizard(customerId) {
+    wizardCampaign = null;
+    document.getElementById('viewList').style.display = 'none';
+    document.getElementById('viewWizard').style.display = 'block';
+    document.getElementById('wizardTitle').textContent = 'Neue Kampagne';
+    document.getElementById('wizardBreadcrumbName').textContent = 'Neue Kampagne';
+    document.getElementById('wizardSubtitle').textContent = '';
+    document.getElementById('wCampaignId').value = '';
+    ['wName','wStart','wEnd','wGoogleId','wMetaId','wTarget','wDesc'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('wPlatform').value = '';
+    document.getElementById('wStatus').value = 'active';
+    document.getElementById('wBudget').value = '';
+    document.getElementById('wFormError').textContent = '';
+    document.getElementById('wCustomer').value = customerId || '';
+    goStep(1);
+    history.replaceState({}, '', '/admin/campaigns.html' + (customerId ? '?customerId=' + customerId : ''));
+  }
+
+  async function openWizardById(id) {
+    try {
+      wizardCampaign = await API.get('/api/admin/campaigns/' + id);
+      document.getElementById('viewList').style.display = 'none';
+      document.getElementById('viewWizard').style.display = 'block';
+      document.getElementById('wCampaignId').value = wizardCampaign.id;
+      document.getElementById('wCustomer').value = wizardCampaign.customer_id;
+      document.getElementById('wName').value = wizardCampaign.name;
+      document.getElementById('wPlatform').value = wizardCampaign.platform || '';
+      document.getElementById('wBudget').value = wizardCampaign.budget_monthly || '';
+      document.getElementById('wStatus').value = wizardCampaign.status || 'active';
+      document.getElementById('wStart').value = wizardCampaign.start_date || '';
+      document.getElementById('wEnd').value = wizardCampaign.end_date || '';
+      document.getElementById('wGoogleId').value = wizardCampaign.google_campaign_id || '';
+      document.getElementById('wMetaId').value = wizardCampaign.meta_campaign_id || '';
+      document.getElementById('wTarget').value = wizardCampaign.target_audience || '';
+      document.getElementById('wDesc').value = wizardCampaign.description || '';
+      document.getElementById('wFormError').textContent = '';
+      document.getElementById('wizardTitle').textContent = wizardCampaign.name;
+      document.getElementById('wizardBreadcrumbName').textContent = wizardCampaign.name;
+      document.getElementById('wizardSubtitle').textContent = wizardCampaign.company_name || '';
+      goStep(1);
+      history.replaceState({}, '', '/admin/campaigns.html?id=' + id);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  function backToList() {
+    document.getElementById('viewWizard').style.display = 'none';
+    document.getElementById('viewList').style.display = 'block';
+    history.replaceState({}, '', '/admin/campaigns.html');
+    loadCampaigns();
+  }
+
+  // ── Wizard: Navigation ────────────────────────────────────────────────────
+  function goStep(n) {
+    wizardStep = n;
+    for (let i = 1; i <= 5; i++) {
+      const el = document.getElementById('wstep-' + i);
+      el.classList.remove('active', 'done');
+      if (i === n) el.classList.add('active');
+      else if (i < n) el.classList.add('done');
+    }
+    [['wline-12',1],['wline-23',2],['wline-34',3],['wline-45',4]].forEach(([id,idx]) => {
+      document.getElementById(id).classList.toggle('done', idx < n);
+    });
+    document.querySelectorAll('.wizard-panel').forEach((el, idx) => {
+      el.classList.toggle('active', idx + 1 === n);
+    });
+    if (n === 2) updateContextInfo();
+    if (n === 3) loadWizardFunnels();
+    if (n === 4) loadWizardCreatives();
+    if (n === 5) loadWizardPerformance();
+  }
+
+  // ── Wizard: Step 1 ───────────────────────────────────────────────────────
+  async function saveWizardSetup() {
+    const id = document.getElementById('wCampaignId').value;
+    const body = {
+      customer_id: document.getElementById('wCustomer').value,
+      name: document.getElementById('wName').value.trim(),
+      platform: document.getElementById('wPlatform').value,
+      budget_monthly: parseFloat(document.getElementById('wBudget').value) || 0,
+      status: document.getElementById('wStatus').value,
+      start_date: document.getElementById('wStart').value || null,
+      end_date: document.getElementById('wEnd').value || null,
+      google_campaign_id: document.getElementById('wGoogleId').value || null,
+      meta_campaign_id: document.getElementById('wMetaId').value || null,
+      target_audience: document.getElementById('wTarget').value || null,
+      description: document.getElementById('wDesc').value || null,
+    };
+    if (!body.customer_id) { document.getElementById('wFormError').textContent = 'Bitte einen Kunden wählen.'; return; }
+    if (!body.name) { document.getElementById('wFormError').textContent = 'Kampagnenname fehlt.'; return; }
+    document.getElementById('wFormError').textContent = '';
+    try {
+      let result;
+      if (id) {
+        await API.put('/api/admin/campaigns/' + id, body);
+        result = await API.get('/api/admin/campaigns/' + id);
+      } else {
+        const created = await API.post('/api/admin/campaigns', body);
+        result = await API.get('/api/admin/campaigns/' + created.id);
+      }
+      wizardCampaign = result;
+      document.getElementById('wCampaignId').value = result.id;
+      document.getElementById('wizardTitle').textContent = result.name;
+      document.getElementById('wizardBreadcrumbName').textContent = result.name;
+      document.getElementById('wizardSubtitle').textContent = result.company_name || '';
+      showToast(id ? 'Kampagne aktualisiert' : 'Kampagne erstellt');
+      history.replaceState({}, '', '/admin/campaigns.html?id=' + result.id);
+      goStep(2);
+    } catch(e) { document.getElementById('wFormError').textContent = e.message; }
+  }
+
+  // ── Wizard: Step 2 ───────────────────────────────────────────────────────
+  function updateContextInfo() {
+    if (!wizardCampaign) return;
+    const cust = customers.find(c => c.id == wizardCampaign.customer_id);
+    document.getElementById('wizardContextInfo').innerHTML = `
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div><span style="font-size:11px;color:#6b7280;display:block">Kampagne</span><strong>${wizardCampaign.name}</strong></div>
+        ${cust ? `<div><span style="font-size:11px;color:#6b7280;display:block">Kunde</span><strong>${cust.company_name}</strong></div>` : ''}
+        ${wizardCampaign.platform ? `<div><span style="font-size:11px;color:#6b7280;display:block">Plattform</span><strong>${wizardCampaign.platform}</strong></div>` : ''}
+        ${wizardCampaign.budget_monthly ? `<div><span style="font-size:11px;color:#6b7280;display:block">Budget</span><strong>${wizardCampaign.budget_monthly}€/Mo</strong></div>` : ''}
+      </div>
+      <p style="margin:8px 0 0;font-size:12px;color:#6b7280">Der KI-Planer öffnet sich mit diesem Kontext vorbelegt.</p>`;
+  }
+
+  function openKIPlaner() {
+    if (wizardCampaign) {
+      const cust = customers.find(c => c.id == wizardCampaign.customer_id);
+      sessionStorage.setItem('campaignContext', JSON.stringify({
+        campaignId: wizardCampaign.id,
+        campaignName: wizardCampaign.name,
+        customerId: wizardCampaign.customer_id,
+        customerName: cust ? cust.company_name : '',
+        platform: wizardCampaign.platform || '',
+        budget: wizardCampaign.budget_monthly || 0,
+        targetAudience: wizardCampaign.target_audience || '',
+      }));
+    }
+    location.href = '/admin/ai-tools.html';
+  }
+
+  // ── Wizard: Step 3 ───────────────────────────────────────────────────────
+  async function loadWizardFunnels() {
+    const el = document.getElementById('wizardFunnelList');
+    if (!wizardCampaign) { el.innerHTML = '<p class="text-muted text-sm">Speichere zuerst die Kampagne in Schritt 1.</p>'; return; }
+    el.innerHTML = '<div class="text-muted text-sm">Laden...</div>';
+    try {
+      const funnels = await API.get('/api/admin/funnels?customer_id=' + wizardCampaign.customer_id);
+      if (!funnels.length) { el.innerHTML = '<div class="text-muted text-sm" style="padding:6px 0">Noch keine Funnels für diesen Kunden.</div>'; return; }
+      el.innerHTML = funnels.map(f => `
+        <div class="mini-item">
+          <div>
+            <strong>${f.name}</strong>
+            <span style="margin-left:8px;font-size:11px;color:${f.status === 'published' ? '#16a34a' : '#6b7280'}">${f.status === 'published' ? '&#9989; Veröffentlicht' : '&#9999; Entwurf'}</span>
+          </div>
+          ${f.slug ? `<a href="/f/${f.slug}/" target="_blank" class="btn btn-sm btn-outline">&#127760;</a>` : ''}
+        </div>`).join('');
+    } catch { el.innerHTML = '<p class="text-muted text-sm">Funnels konnten nicht geladen werden.</p>'; }
+  }
+
+  // ── Wizard: Step 4 ───────────────────────────────────────────────────────
+  async function loadWizardCreatives() {
+    const el = document.getElementById('wizardCreativesList');
+    if (!wizardCampaign) { el.innerHTML = '<p class="text-muted text-sm">Speichere zuerst die Kampagne in Schritt 1.</p>'; return; }
+    el.innerHTML = '<div class="text-muted text-sm">Laden...</div>';
+    try {
+      const creatives = await API.get('/api/admin/ai/creatives?customer_id=' + wizardCampaign.customer_id);
+      if (!creatives.length) { el.innerHTML = '<div class="text-muted text-sm" style="padding:6px 0">Noch keine Creatives für diesen Kunden.</div>'; return; }
+      const typeLabel = { hook:'Hook', headline:'Headline', body:'Anzeigentext', cta:'CTA', landing_page:'Landingpage' };
+      el.innerHTML = creatives.slice(0, 5).map(cr => `
+        <div class="mini-item">
+          <strong style="font-size:13px">${cr.title}</strong>
+          <span class="text-muted text-sm">${typeLabel[cr.type] || cr.type}</span>
+        </div>`).join('') + (creatives.length > 5 ? `<div class="text-muted text-sm" style="padding:4px 0">... und ${creatives.length - 5} weitere</div>` : '');
+    } catch { el.innerHTML = '<p class="text-muted text-sm">Creatives konnten nicht geladen werden.</p>'; }
+  }
+
+  function openCreativeStudio() {
+    if (wizardCampaign) {
+      const cust = customers.find(c => c.id == wizardCampaign.customer_id);
+      sessionStorage.setItem('campaignContext', JSON.stringify({
+        campaignId: wizardCampaign.id,
+        campaignName: wizardCampaign.name,
+        customerId: wizardCampaign.customer_id,
+        customerName: cust ? cust.company_name : '',
+        platform: wizardCampaign.platform || '',
+      }));
+    }
+    location.href = '/admin/ai-tools.html';
+  }
+
+  // ── Wizard: Step 5 ───────────────────────────────────────────────────────
+  async function loadWizardPerformance() {
+    const el = document.getElementById('wizardPerfContent');
+    if (!wizardCampaign) { el.innerHTML = '<p class="text-muted text-sm">Keine Kampagne geladen.</p>'; return; }
+    el.innerHTML = '<div class="text-muted text-sm">Laden...</div>';
+    try {
+      const camp = await API.get('/api/admin/campaigns/' + wizardCampaign.id);
+      const cpl = camp.lead_count > 0 && camp.budget_monthly > 0
+        ? (camp.budget_monthly / camp.lead_count).toFixed(2) : null;
+      el.innerHTML = `
+        <div class="kpi-row">
+          <div class="kpi-box" style="background:#f0fdf4"><div class="lbl">Leads gesamt</div><div class="val" style="color:#15803d">${camp.lead_count || 0}</div></div>
+          <div class="kpi-box" style="background:#eff6ff"><div class="lbl">Abgeschlossen</div><div class="val" style="color:#1d4ed8">${camp.closed_leads || 0}</div></div>
+          <div class="kpi-box" style="background:#fdf4ff"><div class="lbl">Budget/Monat</div><div class="val" style="color:#7c3aed">${camp.budget_monthly ? camp.budget_monthly + '€' : '—'}</div></div>
+          <div class="kpi-box" style="background:#fff7ed"><div class="lbl">Kosten/Lead</div><div class="val" style="color:#c2410c">${cpl ? cpl + '€' : '—'}</div></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:${camp.google_campaign_id ? '#f0fdf4' : '#f3f4f6'};color:${camp.google_campaign_id ? '#15803d' : '#9ca3af'}">${camp.google_campaign_id ? '&#10003; Google verbunden' : '○ Google nicht verbunden'}</span>
+          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:${camp.meta_campaign_id ? '#eff6ff' : '#f3f4f6'};color:${camp.meta_campaign_id ? '#1d4ed8' : '#9ca3af'}">${camp.meta_campaign_id ? '&#10003; Meta verbunden' : '○ Meta nicht verbunden'}</span>
+        </div>
+        <a href="/admin/analytics.html" class="btn btn-sm btn-outline">&#128200; Detaillierte Analytics &#8599;</a>`;
+    } catch(e) { el.innerHTML = '<p class="text-muted text-sm">Performance konnte nicht geladen werden.</p>'; }
   }
 
   init();
