@@ -19,6 +19,13 @@
     .kpi-card { background:#f9fafb; border-radius:8px; padding:10px; text-align:center; }
     .kpi-val { font-size:20px; font-weight:700; }
     .kpi-label { font-size:11px; color:#6b7280; margin-bottom:2px; }
+    .customer-expand-btn { background:none; border:none; cursor:pointer; color:#6b7280; font-size:12px; padding:2px 5px; border-radius:4px; transition:background 0.15s; line-height:1; }
+    .customer-expand-btn:hover { background:#e5e7eb; color:#374151; }
+    .campaigns-row td { padding:0 !important; border-top:none !important; }
+    .campaigns-expand { padding:10px 16px 14px 36px; background:#f5f7ff; border-top:1px dashed #c7d2fe; }
+    .campaign-hub-item { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#fff; border:1px solid #e5e7eb; border-radius:7px; margin-bottom:6px; }
+    .campaign-hub-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; margin-left:12px; }
+    .hub-empty { color:#9ca3af; font-size:12px; padding:6px 0; }
   </style>
 </head>
 <body>
@@ -232,8 +239,13 @@
       return;
     }
     const rows = data.map(c => `
-      <tr>
-        <td><strong>${c.company_name}</strong><br><span class="text-sm text-muted">${c.contact_name}</span></td>
+      <tr id="cust-row-${c.id}">
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="customer-expand-btn" onclick="toggleCustomerCampaigns(${c.id})" id="expand-btn-${c.id}" title="Kampagnen anzeigen">&#9654;</button>
+            <div><strong>${c.company_name}</strong><br><span class="text-sm text-muted">${c.contact_name}</span></div>
+          </div>
+        </td>
         <td>${c.email}<br><span class="text-sm text-muted">${c.phone || '—'}</span></td>
         <td>${c.industry || '—'}</td>
         <td>
@@ -254,6 +266,11 @@
             <button class="btn btn-sm btn-outline" onclick="openResetPw(${c.id})">PW</button>
             <button class="btn btn-sm btn-danger" onclick="deleteCustomer(${c.id},'${c.company_name}')">&#215;</button>
           </div>
+        </td>
+      </tr>
+      <tr class="campaigns-row" id="campaigns-row-${c.id}" style="display:none">
+        <td colspan="8">
+          <div class="campaigns-expand" id="campaigns-expand-${c.id}"></div>
         </td>
       </tr>
     `).join('');
@@ -618,6 +635,64 @@
       showToast('Kunde gelöscht');
       loadCustomers();
     } catch(e) { showToast(e.message,'error'); }
+  }
+
+  // ── Hub: Expandable campaign rows ─────────────────────────────────────────
+  async function toggleCustomerCampaigns(id) {
+    const row = document.getElementById('campaigns-row-' + id);
+    const btn = document.getElementById('expand-btn-' + id);
+    const isOpen = row.style.display !== 'none';
+    if (isOpen) {
+      row.style.display = 'none';
+      btn.innerHTML = '&#9654;';
+      btn.title = 'Kampagnen anzeigen';
+    } else {
+      row.style.display = '';
+      btn.innerHTML = '&#9660;';
+      btn.title = 'Kampagnen ausblenden';
+      await loadCampaignsForRow(id);
+    }
+  }
+
+  async function loadCampaignsForRow(customerId) {
+    const el = document.getElementById('campaigns-expand-' + customerId);
+    el.innerHTML = '<div class="text-muted text-sm" style="padding:8px 0">Laden...</div>';
+    try {
+      const camps = await API.get('/api/admin/campaigns?customer_id=' + customerId);
+      renderRowCampaigns(customerId, camps);
+    } catch(e) {
+      el.innerHTML = '<p class="text-muted text-sm">Fehler beim Laden</p>';
+    }
+  }
+
+  function renderRowCampaigns(customerId, campaigns) {
+    const el = document.getElementById('campaigns-expand-' + customerId);
+    let html = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:600;color:#6366f1">&#128202; Kampagnen (${campaigns.length})</span>
+        <button class="btn btn-sm btn-primary" onclick="location.href='/admin/campaigns.html?customerId=${customerId}'">&#43; Neue Kampagne</button>
+      </div>`;
+    if (!campaigns.length) {
+      html += '<div class="hub-empty">Noch keine Kampagnen. Erste Kampagne anlegen →</div>';
+    } else {
+      html += campaigns.map(c => `
+        <div class="campaign-hub-item">
+          <div>
+            <span style="font-size:13px;font-weight:600">${c.name}</span>
+            <span style="margin-left:8px">${statusBadge(c.status)}</span>
+            <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+              ${c.budget_monthly ? `<span class="camp-tag budget">&#128182; ${c.budget_monthly}€/Mo</span>` : ''}
+              ${c.platform ? `<span class="camp-tag">${c.platform}</span>` : ''}
+              <span class="camp-tag">${c.lead_count || 0} Leads</span>
+            </div>
+          </div>
+          <div class="campaign-hub-actions">
+            <button class="btn btn-sm btn-primary" onclick="location.href='/admin/campaigns.html?id=${c.id}'">&#127760; Im Wizard öffnen</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    el.innerHTML = html;
   }
 
   loadCustomers();
