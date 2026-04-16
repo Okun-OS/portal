@@ -42,15 +42,15 @@ router.get('/:id', requireAdmin, (req, res) => {
 
 // POST /api/admin/campaigns
 router.post('/', requireAdmin, (req, res) => {
-  const { customer_id, name, description, budget_monthly, status, start_date, end_date, platform, target_audience, google_campaign_id, meta_campaign_id } = req.body;
+  const { customer_id, name, description, budget_monthly, status, start_date, end_date, platform, target_audience, google_campaign_id, meta_campaign_id, geo_lat, geo_lng, geo_radius_km, geo_city } = req.body;
 
   if (!customer_id || !name) {
     return res.status(400).json({ error: 'Kunde und Name erforderlich' });
   }
 
   const result = db.prepare(`
-    INSERT INTO campaigns (customer_id, name, description, budget_monthly, status, start_date, end_date, platform, target_audience, google_campaign_id, meta_campaign_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO campaigns (customer_id, name, description, budget_monthly, status, start_date, end_date, platform, target_audience, google_campaign_id, meta_campaign_id, geo_lat, geo_lng, geo_radius_km, geo_city)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     customer_id, name,
     description || null,
@@ -61,7 +61,11 @@ router.post('/', requireAdmin, (req, res) => {
     platform || null,
     target_audience || null,
     google_campaign_id || null,
-    meta_campaign_id || null
+    meta_campaign_id || null,
+    geo_lat ?? null,
+    geo_lng ?? null,
+    geo_radius_km ?? null,
+    geo_city || null
   );
 
   res.status(201).json({ id: result.lastInsertRowid, message: 'Kampagne erstellt' });
@@ -72,13 +76,15 @@ router.put('/:id', requireAdmin, (req, res) => {
   const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(req.params.id);
   if (!campaign) return res.status(404).json({ error: 'Kampagne nicht gefunden' });
 
-  const { name, description, budget_monthly, status, start_date, end_date, platform, target_audience, google_campaign_id, meta_campaign_id } = req.body;
+  const { name, description, budget_monthly, status, start_date, end_date, platform, target_audience, google_campaign_id, meta_campaign_id, geo_lat, geo_lng, geo_radius_km, geo_city } = req.body;
 
   db.prepare(`
     UPDATE campaigns SET
       name = ?, description = ?, budget_monthly = ?, status = ?,
       start_date = ?, end_date = ?, platform = ?, target_audience = ?,
-      google_campaign_id = ?, meta_campaign_id = ?, updated_at = datetime('now')
+      google_campaign_id = ?, meta_campaign_id = ?,
+      geo_lat = ?, geo_lng = ?, geo_radius_km = ?, geo_city = ?,
+      updated_at = datetime('now')
     WHERE id = ?
   `).run(
     name ?? campaign.name,
@@ -91,6 +97,10 @@ router.put('/:id', requireAdmin, (req, res) => {
     target_audience ?? campaign.target_audience,
     google_campaign_id !== undefined ? (google_campaign_id || null) : campaign.google_campaign_id,
     meta_campaign_id !== undefined ? (meta_campaign_id || null) : campaign.meta_campaign_id,
+    geo_lat !== undefined ? (geo_lat ?? null) : campaign.geo_lat,
+    geo_lng !== undefined ? (geo_lng ?? null) : campaign.geo_lng,
+    geo_radius_km !== undefined ? (geo_radius_km ?? null) : campaign.geo_radius_km,
+    geo_city !== undefined ? (geo_city || null) : campaign.geo_city,
     campaign.id
   );
 

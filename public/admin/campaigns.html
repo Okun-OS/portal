@@ -35,7 +35,14 @@
     .wiz-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:#6b7280; margin-bottom:4px; }
     .wiz-breadcrumb a { color:#6b7280; text-decoration:none; }
     .wiz-breadcrumb a:hover { color:var(--primary); }
-    #viewWizard { max-width:820px; }
+    #viewWizard { max-width:860px; }
+    #geoMap { width:100%; height:360px; border-radius:8px; border:1px solid #e5e7eb; background:#f3f4f6; }
+    .geo-radius-btn { padding:6px 14px; border:1.5px solid #d1d5db; border-radius:6px; background:#fff; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; }
+    .geo-radius-btn.active { border-color:var(--primary); background:var(--primary); color:#fff; }
+    .geo-output { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:14px; font-size:12px; line-height:1.7; }
+    .geo-output strong { display:block; font-size:11px; color:#6b7280; margin-bottom:2px; margin-top:10px; }
+    .geo-output strong:first-child { margin-top:0; }
+    .geo-output code { display:block; background:#fff; border:1px solid #e5e7eb; border-radius:5px; padding:6px 10px; font-family:monospace; white-space:pre-wrap; word-break:break-word; }
   </style>
 </head>
 <body>
@@ -104,21 +111,26 @@
         <div class="wizard-line" id="wline-12"></div>
         <div class="wizard-step" id="wstep-2">
           <div class="wizard-step-dot">2</div>
-          <div class="wizard-step-label">KI Planer</div>
+          <div class="wizard-step-label">Geo-Targeting</div>
         </div>
         <div class="wizard-line" id="wline-23"></div>
         <div class="wizard-step" id="wstep-3">
           <div class="wizard-step-dot">3</div>
-          <div class="wizard-step-label">Funnel</div>
+          <div class="wizard-step-label">KI Planer</div>
         </div>
         <div class="wizard-line" id="wline-34"></div>
         <div class="wizard-step" id="wstep-4">
           <div class="wizard-step-dot">4</div>
-          <div class="wizard-step-label">Creatives</div>
+          <div class="wizard-step-label">Funnel</div>
         </div>
         <div class="wizard-line" id="wline-45"></div>
         <div class="wizard-step" id="wstep-5">
           <div class="wizard-step-dot">5</div>
+          <div class="wizard-step-label">Creatives</div>
+        </div>
+        <div class="wizard-line" id="wline-56"></div>
+        <div class="wizard-step" id="wstep-6">
+          <div class="wizard-step-dot">6</div>
           <div class="wizard-step-label">Performance</div>
         </div>
       </div>
@@ -197,8 +209,35 @@
         </div>
       </div>
 
-      <!-- Step 2: KI Planer -->
+      <!-- Step 2: Geo-Targeting -->
       <div class="wizard-panel" id="step-panel-2">
+        <div class="card">
+          <div class="card-header"><h3 style="margin:0;font-size:15px">&#128205; Geo-Targeting</h3></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:#6b7280;margin:0 0 12px">Klicke auf die Karte um den Zielort zu setzen, dann wähle den Radius.</p>
+            <div id="geoMap"><div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:13px">&#128205; Karte wird geladen...</div></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:600;color:#374151">Radius:</span>
+              <button class="geo-radius-btn" data-km="5" onclick="setRadius(5)">5 km</button>
+              <button class="geo-radius-btn active" data-km="10" onclick="setRadius(10)">10 km</button>
+              <button class="geo-radius-btn" data-km="25" onclick="setRadius(25)">25 km</button>
+              <button class="geo-radius-btn" data-km="50" onclick="setRadius(50)">50 km</button>
+            </div>
+            <div style="margin-top:12px;font-size:12px;color:#6b7280" id="geoCoords">Noch kein Ort gewählt.</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px" id="geoOutputCard" style="display:none">
+          <div class="card-header"><h3 style="margin:0;font-size:13px;font-weight:600">&#127919; Targeting-Vorschau</h3></div>
+          <div class="card-body geo-output" id="geoOutput"></div>
+        </div>
+        <div class="wizard-actions">
+          <button class="btn btn-secondary" onclick="goStep(1)">&#8592; Setup</button>
+          <button class="btn btn-primary" onclick="saveGeoAndNext()">&#10003; Speichern &amp; Weiter &#8594;</button>
+        </div>
+      </div>
+
+      <!-- Step 3: KI Planer -->
+      <div class="wizard-panel" id="step-panel-3">
         <div class="launch-card launch-card-ai">
           <div>
             <h3>&#129504; KI Kampagnenplaner</h3>
@@ -210,13 +249,13 @@
           <div class="card-body" id="wizardContextInfo" style="font-size:13px;color:#374151"></div>
         </div>
         <div class="wizard-actions">
-          <button class="btn btn-secondary" onclick="goStep(1)">&#8592; Setup</button>
-          <button class="btn btn-primary" onclick="goStep(3)">Weiter: Funnel &#8594;</button>
+          <button class="btn btn-secondary" onclick="goStep(2)">&#8592; Geo-Targeting</button>
+          <button class="btn btn-primary" onclick="goStep(4)">Weiter: Funnel &#8594;</button>
         </div>
       </div>
 
-      <!-- Step 3: Funnel -->
-      <div class="wizard-panel" id="step-panel-3">
+      <!-- Step 4: Funnel -->
+      <div class="wizard-panel" id="step-panel-4">
         <div class="launch-card launch-card-funnel">
           <div>
             <h3>&#127915; Funnel Builder</h3>
@@ -229,13 +268,13 @@
           <div id="wizardFunnelList"><div class="text-muted text-sm">Laden...</div></div>
         </div>
         <div class="wizard-actions">
-          <button class="btn btn-secondary" onclick="goStep(2)">&#8592; KI Planer</button>
-          <button class="btn btn-primary" onclick="goStep(4)">Weiter: Creatives &#8594;</button>
+          <button class="btn btn-secondary" onclick="goStep(3)">&#8592; KI Planer</button>
+          <button class="btn btn-primary" onclick="goStep(5)">Weiter: Creatives &#8594;</button>
         </div>
       </div>
 
-      <!-- Step 4: Creatives -->
-      <div class="wizard-panel" id="step-panel-4">
+      <!-- Step 5: Creatives -->
+      <div class="wizard-panel" id="step-panel-5">
         <div class="launch-card launch-card-creative">
           <div>
             <h3>&#127912; Creative Studio</h3>
@@ -248,16 +287,16 @@
           <div id="wizardCreativesList"><div class="text-muted text-sm">Laden...</div></div>
         </div>
         <div class="wizard-actions">
-          <button class="btn btn-secondary" onclick="goStep(3)">&#8592; Funnel</button>
-          <button class="btn btn-primary" onclick="goStep(5)">Weiter: Performance &#8594;</button>
+          <button class="btn btn-secondary" onclick="goStep(4)">&#8592; Funnel</button>
+          <button class="btn btn-primary" onclick="goStep(6)">Weiter: Performance &#8594;</button>
         </div>
       </div>
 
-      <!-- Step 5: Performance -->
-      <div class="wizard-panel" id="step-panel-5">
+      <!-- Step 6: Performance -->
+      <div class="wizard-panel" id="step-panel-6">
         <div id="wizardPerfContent"><div class="text-muted text-sm">Laden...</div></div>
         <div class="wizard-actions">
-          <button class="btn btn-secondary" onclick="goStep(4)">&#8592; Creatives</button>
+          <button class="btn btn-secondary" onclick="goStep(5)">&#8592; Creatives</button>
           <button class="btn btn-primary" onclick="backToList()">&#128202; Zur Übersicht</button>
         </div>
       </div>
@@ -349,6 +388,9 @@
   let customers = [];
   let wizardCampaign = null;
   let wizardStep = 1;
+  let geoMap = null, geoMarker = null, geoCircle = null;
+  let geoLat = null, geoLng = null, geoRadius = 10, geoCity = '';
+  let geoMapLoaded = false;
 
   async function init() {
     customers = await API.get('/api/admin/customers');
@@ -492,6 +534,7 @@
     document.getElementById('wBudget').value = '';
     document.getElementById('wFormError').textContent = '';
     document.getElementById('wCustomer').value = customerId || '';
+    geoLat = null; geoLng = null; geoRadius = 10; geoCity = ''; geoMapLoaded = false;
     goStep(1);
     history.replaceState({}, '', '/admin/campaigns.html' + (customerId ? '?customerId=' + customerId : ''));
   }
@@ -517,6 +560,11 @@
       document.getElementById('wizardTitle').textContent = wizardCampaign.name;
       document.getElementById('wizardBreadcrumbName').textContent = wizardCampaign.name;
       document.getElementById('wizardSubtitle').textContent = wizardCampaign.company_name || '';
+      geoLat = wizardCampaign.geo_lat ?? null;
+      geoLng = wizardCampaign.geo_lng ?? null;
+      geoRadius = wizardCampaign.geo_radius_km || 10;
+      geoCity = wizardCampaign.geo_city || '';
+      geoMapLoaded = false;
       goStep(1);
       history.replaceState({}, '', '/admin/campaigns.html?id=' + id);
     } catch(e) { showToast(e.message, 'error'); }
@@ -532,22 +580,23 @@
   // ── Wizard: Navigation ────────────────────────────────────────────────────
   function goStep(n) {
     wizardStep = n;
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 6; i++) {
       const el = document.getElementById('wstep-' + i);
       el.classList.remove('active', 'done');
       if (i === n) el.classList.add('active');
       else if (i < n) el.classList.add('done');
     }
-    [['wline-12',1],['wline-23',2],['wline-34',3],['wline-45',4]].forEach(([id,idx]) => {
+    [['wline-12',1],['wline-23',2],['wline-34',3],['wline-45',4],['wline-56',5]].forEach(([id,idx]) => {
       document.getElementById(id).classList.toggle('done', idx < n);
     });
     document.querySelectorAll('.wizard-panel').forEach((el, idx) => {
       el.classList.toggle('active', idx + 1 === n);
     });
-    if (n === 2) updateContextInfo();
-    if (n === 3) loadWizardFunnels();
-    if (n === 4) loadWizardCreatives();
-    if (n === 5) loadWizardPerformance();
+    if (n === 2) initGeoStep();
+    if (n === 3) updateContextInfo();
+    if (n === 4) loadWizardFunnels();
+    if (n === 5) loadWizardCreatives();
+    if (n === 6) loadWizardPerformance();
   }
 
   // ── Wizard: Step 1 ───────────────────────────────────────────────────────
@@ -585,11 +634,104 @@
       document.getElementById('wizardSubtitle').textContent = result.company_name || '';
       showToast(id ? 'Kampagne aktualisiert' : 'Kampagne erstellt');
       history.replaceState({}, '', '/admin/campaigns.html?id=' + result.id);
+      // Restore geo state from saved campaign
+      geoLat = result.geo_lat ?? null;
+      geoLng = result.geo_lng ?? null;
+      geoRadius = result.geo_radius_km || 10;
+      geoCity = result.geo_city || '';
       goStep(2);
     } catch(e) { document.getElementById('wFormError').textContent = e.message; }
   }
 
-  // ── Wizard: Step 2 ───────────────────────────────────────────────────────
+  // ── Wizard: Step 2 – Geo-Targeting ───────────────────────────────────────
+  async function initGeoStep() {
+    if (geoMapLoaded) { if (geoMap) google.maps.event.trigger(geoMap, 'resize'); return; }
+    geoMapLoaded = true;
+    try {
+      const cfg = await API.get('/api/admin/config');
+      const key = cfg.googleMapsKey;
+      if (!key) { document.getElementById('geoMap').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:13px;flex-direction:column;gap:8px"><span>&#128205;</span><span>Kein Google Maps API Key konfiguriert.</span><span style="font-size:11px">GOOGLE_API_KEY in .env setzen</span></div>'; return; }
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=_geoMapReady&language=de&libraries=geometry`;
+      script.async = true;
+      document.head.appendChild(script);
+    } catch(e) { console.error('geo init', e); }
+  }
+
+  window._geoMapReady = function() {
+    const center = (geoLat && geoLng) ? { lat: geoLat, lng: geoLng } : { lat: 51.1657, lng: 10.4515 };
+    geoMap = new google.maps.Map(document.getElementById('geoMap'), {
+      center, zoom: geoLat ? 10 : 6,
+      mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+    });
+    if (geoLat && geoLng) placeGeoMarker(new google.maps.LatLng(geoLat, geoLng), false);
+    geoMap.addListener('click', e => placeGeoMarker(e.latLng, true));
+  };
+
+  function placeGeoMarker(latLng, doGeocode) {
+    if (geoMarker) geoMarker.setMap(null);
+    if (geoCircle) geoCircle.setMap(null);
+    geoLat = latLng.lat(); geoLng = latLng.lng();
+    geoMarker = new google.maps.Marker({ position: latLng, map: geoMap, animation: google.maps.Animation.DROP });
+    geoCircle = new google.maps.Circle({
+      map: geoMap, center: latLng, radius: geoRadius * 1000,
+      fillColor: '#6366f1', fillOpacity: 0.12, strokeColor: '#6366f1', strokeWeight: 1.5,
+    });
+    geoMap.fitBounds(geoCircle.getBounds());
+    if (doGeocode) {
+      const gc = new google.maps.Geocoder();
+      gc.geocode({ location: latLng, language: 'de' }, (res, status) => {
+        if (status === 'OK' && res[0]) {
+          const comp = res[0].address_components;
+          const city = (comp.find(c => c.types.includes('locality')) || comp.find(c => c.types.includes('administrative_area_level_2')) || {}).long_name || '';
+          geoCity = city;
+        }
+        updateGeoOutput();
+      });
+    } else { updateGeoOutput(); }
+  }
+
+  function setRadius(km) {
+    geoRadius = km;
+    document.querySelectorAll('.geo-radius-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.km) === km));
+    if (geoCircle) {
+      geoCircle.setRadius(km * 1000);
+      if (geoMap) geoMap.fitBounds(geoCircle.getBounds());
+    }
+    updateGeoOutput();
+  }
+
+  function updateGeoOutput() {
+    const city = geoCity || `${geoLat?.toFixed(4)}, ${geoLng?.toFixed(4)}`;
+    document.getElementById('geoCoords').textContent = geoLat
+      ? `📍 ${city || ''} — ${geoLat.toFixed(5)}, ${geoLng.toFixed(5)} — Radius: ${geoRadius} km`
+      : 'Noch kein Ort gewählt.';
+    if (!geoLat) return;
+    const card = document.getElementById('geoOutputCard');
+    card.style.display = '';
+    const metaText = `Menschen im Umkreis von ${geoRadius} km um ${city}`;
+    const googleText = `Standort: ${city}\nRadius-Gebot-Anpassung: +20% für ${geoRadius} km Umkreis\nKoordinaten: ${geoLat.toFixed(5)}, ${geoLng.toFixed(5)}`;
+    document.getElementById('geoOutput').innerHTML = `
+      <strong>&#127988; Meta Ads – Standort-Targeting</strong>
+      <code>${metaText}</code>
+      <strong>&#128269; Google Ads – Standort-Targeting</strong>
+      <code>${googleText}</code>`;
+  }
+
+  async function saveGeoAndNext() {
+    if (!wizardCampaign) { showToast('Zuerst Kampagne in Schritt 1 speichern', 'error'); return; }
+    try {
+      await API.put('/api/admin/campaigns/' + wizardCampaign.id, {
+        geo_lat: geoLat, geo_lng: geoLng, geo_radius_km: geoRadius, geo_city: geoCity,
+      });
+      wizardCampaign.geo_lat = geoLat; wizardCampaign.geo_lng = geoLng;
+      wizardCampaign.geo_radius_km = geoRadius; wizardCampaign.geo_city = geoCity;
+      showToast('Geo-Targeting gespeichert');
+      goStep(3);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ── Wizard: Step 3 ───────────────────────────────────────────────────────
   function updateContextInfo() {
     if (!wizardCampaign) return;
     const cust = customers.find(c => c.id == wizardCampaign.customer_id);
@@ -614,6 +756,8 @@
         platform: wizardCampaign.platform || '',
         budget: wizardCampaign.budget_monthly || 0,
         targetAudience: wizardCampaign.target_audience || '',
+        geoCity: geoCity || wizardCampaign.geo_city || '',
+        geoRadius: geoRadius || wizardCampaign.geo_radius_km || '',
       }));
     }
     location.href = '/admin/ai-tools.html';

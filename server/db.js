@@ -241,6 +241,10 @@ const migrations = [
   'ALTER TABLE campaigns ADD COLUMN google_campaign_id TEXT',
   'ALTER TABLE leads ADD COLUMN funnel_id INTEGER REFERENCES funnels(id) ON DELETE SET NULL',
   'ALTER TABLE leads ADD COLUMN funnel_slug TEXT',
+  'ALTER TABLE campaigns ADD COLUMN geo_lat REAL',
+  'ALTER TABLE campaigns ADD COLUMN geo_lng REAL',
+  'ALTER TABLE campaigns ADD COLUMN geo_radius_km INTEGER',
+  'ALTER TABLE campaigns ADD COLUMN geo_city TEXT',
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch { /* column already exists */ }

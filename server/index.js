@@ -29,6 +29,11 @@ app.use('/api/admin/funnels', require('./routes/admin/funnels'));
 // Webhooks (public – no auth, optional secret)
 app.use('/api/webhooks', require('./routes/webhooks'));
 
+// Config endpoint – exposes non-secret browser keys
+app.get('/api/admin/config', require('./middleware/auth').requireAdmin, (req, res) => {
+  res.json({ googleMapsKey: process.env.GOOGLE_API_KEY || '' });
+});
+
 // Admin stats
 const { requireAdmin } = require('./middleware/auth');
 const db = require('./db');
