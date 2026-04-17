@@ -40,6 +40,11 @@ router.get('/:id', requireAdmin, (req, res) => {
   res.json({ ...campaign, leads });
 });
 
+// GET /api/admin/campaigns/config  – public keys needed by frontend
+router.get('/config', requireAdmin, (req, res) => {
+  res.json({ google_maps_key: process.env.GOOGLE_API_KEY || '' });
+});
+
 // POST /api/admin/campaigns
 router.post('/', requireAdmin, (req, res) => {
   const { customer_id, name, description, budget_monthly, status, start_date, end_date, platform, target_audience, google_campaign_id, meta_campaign_id } = req.body;
@@ -72,13 +77,19 @@ router.put('/:id', requireAdmin, (req, res) => {
   const campaign = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(req.params.id);
   if (!campaign) return res.status(404).json({ error: 'Kampagne nicht gefunden' });
 
-  const { name, description, budget_monthly, status, start_date, end_date, platform, target_audience, google_campaign_id, meta_campaign_id } = req.body;
+  const {
+    name, description, budget_monthly, status, start_date, end_date,
+    platform, target_audience, google_campaign_id, meta_campaign_id,
+    geo_lat, geo_lng, geo_radius_km, geo_location_name,
+  } = req.body;
 
   db.prepare(`
     UPDATE campaigns SET
       name = ?, description = ?, budget_monthly = ?, status = ?,
       start_date = ?, end_date = ?, platform = ?, target_audience = ?,
-      google_campaign_id = ?, meta_campaign_id = ?, updated_at = datetime('now')
+      google_campaign_id = ?, meta_campaign_id = ?,
+      geo_lat = ?, geo_lng = ?, geo_radius_km = ?, geo_location_name = ?,
+      updated_at = datetime('now')
     WHERE id = ?
   `).run(
     name ?? campaign.name,
@@ -90,7 +101,11 @@ router.put('/:id', requireAdmin, (req, res) => {
     platform ?? campaign.platform,
     target_audience ?? campaign.target_audience,
     google_campaign_id !== undefined ? (google_campaign_id || null) : campaign.google_campaign_id,
-    meta_campaign_id !== undefined ? (meta_campaign_id || null) : campaign.meta_campaign_id,
+    meta_campaign_id  !== undefined ? (meta_campaign_id  || null) : campaign.meta_campaign_id,
+    geo_lat           !== undefined ? (geo_lat           ?? null)  : campaign.geo_lat,
+    geo_lng           !== undefined ? (geo_lng           ?? null)  : campaign.geo_lng,
+    geo_radius_km     !== undefined ? (geo_radius_km     ?? null)  : campaign.geo_radius_km,
+    geo_location_name !== undefined ? (geo_location_name ?? null)  : campaign.geo_location_name,
     campaign.id
   );
 
