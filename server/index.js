@@ -67,7 +67,7 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n🚀 Lead Management Portal läuft auf http://localhost:${PORT}`);
   console.log(`   Admin:  ${process.env.ADMIN_EMAIL || 'admin@leadportal.com'}`);
   console.log(`   Pass:   ${process.env.ADMIN_PASSWORD || 'Admin123!'}\n`);
@@ -96,3 +96,6 @@ app.listen(PORT, () => {
   setTimeout(autoSync, 30 * 1000);
   setInterval(autoSync, 3 * 60 * 60 * 1000);
 });
+
+// 120s socket timeout – AI calls can take up to 90s, this gives a clean buffer
+server.setTimeout(120000);
