@@ -268,13 +268,46 @@ db.exec(`
   );
 `);
 
-// Customer activity tracking
-const activityMigrations = [
+// Customer activity tracking + Google OAuth
+const extraMigrations = [
   'ALTER TABLE customers ADD COLUMN last_login_at TEXT',
   'ALTER TABLE customers ADD COLUMN login_count INTEGER NOT NULL DEFAULT 0',
+  "ALTER TABLE users ADD COLUMN google_id TEXT",
+  "ALTER TABLE users ADD COLUMN avatar_url TEXT",
 ];
-for (const sql of activityMigrations) {
+for (const sql of extraMigrations) {
   try { db.exec(sql); } catch { /* column already exists */ }
+}
+
+// App-wide settings (key-value)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS app_settings (
+    key        TEXT PRIMARY KEY,
+    value      TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
+// Seed default settings if missing
+const defaultSettings = {
+  company_name: process.env.COMPANY_NAME || 'Okun Leads',
+  company_phone: process.env.COMPANY_PHONE || '',
+  company_website: process.env.COMPANY_WEBSITE || '',
+  portal_url: process.env.PORTAL_URL || '',
+  smtp_host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  smtp_port: process.env.SMTP_PORT || '587',
+  smtp_user: process.env.SMTP_USER || '',
+  smtp_pass: process.env.SMTP_PASS || '',
+  smtp_from: process.env.SMTP_FROM || '',
+  sig_logo_position: 'top',
+  sig_logo_align: 'left',
+  sig_custom_line: '',
+  google_oauth_client_id: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
+  google_oauth_client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
+};
+const upsertSetting = db.prepare(`INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING`);
+for (const [key, value] of Object.entries(defaultSettings)) {
+  upsertSetting.run(key, value);
 }
 
 module.exports = db;

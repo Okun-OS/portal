@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Einstellungen – Okun Leads</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .settings-grid { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start; }
+    .settings-nav { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; }
+    .snav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; font-size: 14px; cursor: pointer; color: #374151; font-weight: 500; }
+    .snav-item:hover { background: #f3f4f6; }
+    .snav-item.active { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+    .snav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
+    .sig-preview { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; min-height: 60px; }
+    .sig-preview-inner { font-family: Arial, sans-serif; font-size: 13px; line-height: 1.7; color: #374151; }
+    .logo-drop { border: 2px dashed #d1d5db; border-radius: 10px; padding: 28px; text-align: center; cursor: pointer; transition: all .15s; background: #fafafa; }
+    .logo-drop:hover, .logo-drop.drag { border-color: #6366f1; background: #f0f0ff; }
+    .logo-preview-img { max-height: 60px; max-width: 200px; object-fit: contain; border-radius: 6px; margin-top: 8px; }
+    .google-steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+    .google-steps li { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+    .google-steps li:last-child { border-bottom: none; }
+    .google-steps li::before { counter-increment: step; content: counter(step); width: 24px; height: 24px; background: #eff6ff; color: #1d4ed8; border-radius: 50%; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .pos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .pos-opt { border: 2px solid #e5e7eb; border-radius: 8px; padding: 10px 6px; text-align: center; cursor: pointer; font-size: 11px; font-weight: 600; color: #6b7280; transition: all .15s; }
+    .pos-opt.sel { border-color: #4f46e5; background: #eff6ff; color: #4f46e5; }
+    .pos-opt .icon { font-size: 18px; display: block; margin-bottom: 4px; }
+    .align-row { display: flex; gap: 8px; }
+    .align-opt { flex: 1; border: 2px solid #e5e7eb; border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; color: #6b7280; }
+    .align-opt.sel { border-color: #4f46e5; background: #eff6ff; color: #4f46e5; }
+    .smtp-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 99px; }
+    .smtp-ok { background: #dcfce7; color: #15803d; }
+    .smtp-off { background: #fef9c3; color: #92400e; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><img src="/img/brand-logo.png" alt="Okun Leads" class="brand-logo-img" onerror="this.style.display='none'"><span class="brand-logo-text">Okun Leads</span><span class="sidebar-badge admin">Admin</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" onclick="location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Kunden &amp; Leads</span></div>
+      <div class="nav-item" onclick="location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" onclick="location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-section"><span class="nav-section-label">Kampagnen</span></div>
+      <div class="nav-item" onclick="location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen-Übersicht</div>
+      <div class="nav-item" onclick="location.href='/admin/analytics.html'"><span class="nav-icon">&#128200;</span> Analytics</div>
+      <div class="nav-section"><span class="nav-section-label">Assets</span></div>
+      <div class="nav-item" onclick="location.href='/admin/creative-templates.html'"><span class="nav-icon">&#127912;</span> Kreativ-Vorlagen</div>
+      <div class="nav-section"><span class="nav-section-label">Dokumente</span></div>
+      <div class="nav-item" onclick="location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+      <div class="nav-section"><span class="nav-section-label">System</span></div>
+      <div class="nav-item active" onclick="location.href='/admin/settings.html'"><span class="nav-icon">&#9881;</span> Einstellungen</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">⚙️ Einstellungen</h1>
+    </div>
+    <div class="page-body">
+      <div class="settings-grid">
+
+        <!-- Left nav -->
+        <div class="settings-nav">
+          <div class="snav-item active" onclick="showPanel('branding')"><span class="snav-icon">🏢</span> Branding</div>
+          <div class="snav-item" onclick="showPanel('email')"><span class="snav-icon">📧</span> E-Mail / SMTP</div>
+          <div class="snav-item" onclick="showPanel('signature')"><span class="snav-icon">✍️</span> Signatur</div>
+          <div class="snav-item" onclick="showPanel('google')"><span class="snav-icon">🔐</span> Google Login</div>
+        </div>
+
+        <!-- Right panels -->
+        <div>
+
+          <!-- BRANDING -->
+          <div id="panel-branding" class="settings-panel active">
+            <div class="card" style="padding:24px;margin-bottom:16px">
+              <h2 style="font-size:15px;font-weight:700;margin:0 0 18px">Branding</h2>
+
+              <div class="form-grid" style="margin-bottom:16px">
+                <div class="form-group">
+                  <label class="form-label">Firmenname</label>
+                  <input type="text" id="s_company_name" class="form-control" placeholder="Okun Leads">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Portal-URL <span style="font-size:10px;color:#9ca3af">(Railway-URL)</span></label>
+                  <input type="url" id="s_portal_url" class="form-control" placeholder="https://okun-leads.up.railway.app">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Telefon Kundenservice</label>
+                  <input type="text" id="s_company_phone" class="form-control" placeholder="+49 89 1234567">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Website</label>
+                  <input type="url" id="s_company_website" class="form-control" placeholder="https://okun-leads.de">
+                </div>
+              </div>
+
+              <button class="btn btn-primary" onclick="saveBranding()">Speichern</button>
+            </div>
+
+            <div class="card" style="padding:24px">
+              <h2 style="font-size:15px;font-weight:700;margin:0 0 6px">Logo hochladen</h2>
+              <p style="font-size:13px;color:#6b7280;margin:0 0 16px">Wird in der Sidebar und in E-Mails verwendet. JPG, PNG, SVG, max. 2 MB.</p>
+
+              <div class="logo-drop" id="logoDrop" onclick="document.getElementById('logoFile').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleLogoDrop(event)">
+                <div style="font-size:28px;margin-bottom:6px">🖼️</div>
+                <div style="font-size:14px;font-weight:600;color:#374151">Klicken oder ziehen</div>
+                <div style="font-size:12px;color:#9ca3af;margin-top:2px">JPG · PNG · SVG · WebP</div>
+                <img id="logoPreview" class="logo-preview-img" src="/img/brand-logo.png" alt="" onerror="this.style.display='none'" style="display:block;margin:8px auto 0">
+              </div>
+              <input type="file" id="logoFile" accept="image/*" style="display:none" onchange="uploadLogo(this.files[0])">
+            </div>
+          </div>
+
+          <!-- EMAIL -->
+          <div id="panel-email" class="settings-panel">
+            <div class="card" style="padding:24px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+                <h2 style="font-size:15px;font-weight:700;margin:0">E-Mail / SMTP</h2>
+                <span id="smtpStatus" class="smtp-status smtp-off">⚠ Nicht konfiguriert</span>
+              </div>
+
+              <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px">
+                <strong>Gmail verbinden:</strong> Geh zu <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a> → App-Passwort erstellen (App: E-Mail) → 16-stelligen Code hier einfügen.
+              </div>
+
+              <div class="form-grid" style="margin-bottom:16px">
+                <div class="form-group">
+                  <label class="form-label">SMTP Host</label>
+                  <input type="text" id="s_smtp_host" class="form-control" value="smtp.gmail.com">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Port</label>
+                  <input type="number" id="s_smtp_port" class="form-control" value="587">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Gmail-Adresse</label>
+                  <input type="email" id="s_smtp_user" class="form-control" placeholder="deine@gmail.com">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">App-Passwort</label>
+                  <input type="password" id="s_smtp_pass" class="form-control" placeholder="16-stelliger Code von Google">
+                </div>
+                <div class="form-group col-span-2">
+                  <label class="form-label">Absender-Adresse (From)</label>
+                  <input type="email" id="s_smtp_from" class="form-control" placeholder="noreply@okun-leads.de (oder deine Gmail-Adresse)">
+                </div>
+              </div>
+
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn btn-primary" onclick="saveEmail()">Speichern</button>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="email" id="testEmailTo" class="form-control" placeholder="test@mail.de" style="width:200px">
+                  <button class="btn btn-outline" id="btnTestEmail" onclick="sendTestEmail()">Test-E-Mail senden</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SIGNATURE -->
+          <div id="panel-signature" class="settings-panel">
+            <div class="card" style="padding:24px">
+              <h2 style="font-size:15px;font-weight:700;margin:0 0 18px">E-Mail Signatur</h2>
+
+              <div style="margin-bottom:20px">
+                <label class="form-label" style="margin-bottom:8px">Logo-Position</label>
+                <div class="pos-grid" id="logoPosPicker">
+                  <div class="pos-opt sel" data-val="top" onclick="selectPos(this)"><span class="icon">⬆️</span>Oben</div>
+                  <div class="pos-opt" data-val="bottom" onclick="selectPos(this)"><span class="icon">⬇️</span>Unten</div>
+                  <div class="pos-opt" data-val="left" onclick="selectPos(this)"><span class="icon">⬅️</span>Links</div>
+                  <div class="pos-opt" data-val="right" onclick="selectPos(this)"><span class="icon">➡️</span>Rechts</div>
+                </div>
+              </div>
+
+              <div style="margin-bottom:20px">
+                <label class="form-label" style="margin-bottom:8px">Logo-Ausrichtung</label>
+                <div class="align-row" id="logoAlignPicker">
+                  <div class="align-opt sel" data-val="left" onclick="selectAlign(this)">⬛ Links</div>
+                  <div class="align-opt" data-val="center" onclick="selectAlign(this)">◻️ Mitte</div>
+                  <div class="align-opt" data-val="right" onclick="selectAlign(this)">⬛ Rechts</div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Zusätzliche Zeile</label>
+                <input type="text" id="s_sig_custom_line" class="form-control" placeholder="z.B. Ihr zuverlässiger Marketing-Partner" oninput="updateSigPreview()">
+              </div>
+
+              <div style="margin-bottom:20px">
+                <label class="form-label" style="margin-bottom:8px">Vorschau</label>
+                <div class="sig-preview">
+                  <div id="sigPreviewInner" class="sig-preview-inner"></div>
+                </div>
+              </div>
+
+              <button class="btn btn-primary" onclick="saveSignature()">Signatur speichern</button>
+            </div>
+          </div>
+
+          <!-- GOOGLE LOGIN -->
+          <div id="panel-google" class="settings-panel">
+            <div class="card" style="padding:24px;margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h2 style="font-size:15px;font-weight:700;margin:0">Google Login einrichten</h2>
+                <span id="googleStatus" class="smtp-status smtp-off">Nicht aktiv</span>
+              </div>
+
+              <ol class="google-steps">
+                <li><span><strong><a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> öffnen</strong> → Projekt auswählen oder neu erstellen</span></li>
+                <li><span><strong>APIs &amp; Services → Anmeldedaten</strong> → "+ Anmeldedaten erstellen" → "OAuth-Client-ID"</span></li>
+                <li><span><strong>Anwendungstyp:</strong> "Webanwendung" → Name: "Okun Leads Portal"</span></li>
+                <li><span><strong>Autorisierte Weiterleitungs-URIs hinzufügen:</strong><br>
+                  <code id="callbackUrl" style="background:#f3f4f6;padding:3px 8px;border-radius:4px;font-size:12px;display:inline-block;margin-top:4px"></code>
+                  <button onclick="copyCallback()" class="btn btn-sm btn-outline" style="margin-left:8px;font-size:11px">Kopieren</button>
+                </span></li>
+                <li><span><strong>Client-ID und Client-Secret kopieren</strong> und unten einfügen</span></li>
+              </ol>
+            </div>
+
+            <div class="card" style="padding:24px">
+              <div class="form-grid" style="margin-bottom:16px">
+                <div class="form-group">
+                  <label class="form-label">Google Client ID</label>
+                  <input type="text" id="s_google_oauth_client_id" class="form-control" placeholder="XXXXXXXX.apps.googleusercontent.com">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Google Client Secret</label>
+                  <input type="password" id="s_google_oauth_client_secret" class="form-control" placeholder="GOCSPX-...">
+                </div>
+              </div>
+              <p style="font-size:12px;color:#6b7280;margin:0 0 14px">Wichtig: Die Portal-URL muss unter "Branding" korrekt eingetragen sein, damit der OAuth-Callback funktioniert.</p>
+              <button class="btn btn-primary" onclick="saveGoogle()">Speichern &amp; aktivieren</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999"></div>
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  let settings = {};
+
+  async function init() {
+    settings = await API.get('/api/admin/settings');
+    fillFields();
+    updateSmtpStatus();
+    updateGoogleStatus();
+    updateSigPreview();
+    updateCallbackUrl();
+  }
+
+  function fillFields() {
+    const map = {
+      s_company_name: 'company_name', s_portal_url: 'portal_url',
+      s_company_phone: 'company_phone', s_company_website: 'company_website',
+      s_smtp_host: 'smtp_host', s_smtp_port: 'smtp_port',
+      s_smtp_user: 'smtp_user', s_smtp_pass: 'smtp_pass', s_smtp_from: 'smtp_from',
+      s_sig_custom_line: 'sig_custom_line',
+      s_google_oauth_client_id: 'google_oauth_client_id',
+      s_google_oauth_client_secret: 'google_oauth_client_secret',
+    };
+    for (const [el, key] of Object.entries(map)) {
+      const e = document.getElementById(el);
+      if (e && settings[key]) e.value = settings[key];
+    }
+    // Signature pickers
+    selectPosVal(settings.sig_logo_position || 'top');
+    selectAlignVal(settings.sig_logo_align || 'left');
+  }
+
+  function showPanel(id) {
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.snav-item').forEach(i => i.classList.remove('active'));
+    document.getElementById('panel-' + id).classList.add('active');
+    document.querySelectorAll('.snav-item').forEach(i => {
+      if (i.getAttribute('onclick')?.includes("'" + id + "'")) i.classList.add('active');
+    });
+    if (id === 'signature') updateSigPreview();
+  }
+
+  // ── Branding ──────────────────────────────────────────────────────────────
+  async function saveBranding() {
+    await API.put('/api/admin/settings', {
+      company_name: document.getElementById('s_company_name').value,
+      portal_url: document.getElementById('s_portal_url').value,
+      company_phone: document.getElementById('s_company_phone').value,
+      company_website: document.getElementById('s_company_website').value,
+    });
+    showToast('Branding gespeichert ✓');
+    updateCallbackUrl();
+  }
+
+  // ── Logo upload ────────────────────────────────────────────────────────────
+  function handleLogoDrop(e) {
+    e.preventDefault();
+    document.getElementById('logoDrop').classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadLogo(file);
+  }
+
+  async function uploadLogo(file) {
+    if (!file) return;
+    const form = new FormData();
+    form.append('logo', file);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/admin/settings/logo', {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: form
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Fehler');
+      const img = document.getElementById('logoPreview');
+      img.src = data.url;
+      img.style.display = 'block';
+      showToast('Logo hochgeladen ✓ — Seite neu laden um es in der Sidebar zu sehen');
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ── Email ──────────────────────────────────────────────────────────────────
+  async function saveEmail() {
+    await API.put('/api/admin/settings', {
+      smtp_host: document.getElementById('s_smtp_host').value,
+      smtp_port: document.getElementById('s_smtp_port').value,
+      smtp_user: document.getElementById('s_smtp_user').value,
+      smtp_pass: document.getElementById('s_smtp_pass').value,
+      smtp_from: document.getElementById('s_smtp_from').value,
+    });
+    updateSmtpStatus();
+    showToast('E-Mail-Einstellungen gespeichert ✓');
+  }
+
+  function updateSmtpStatus() {
+    const el = document.getElementById('smtpStatus');
+    const user = document.getElementById('s_smtp_user').value || settings.smtp_user;
+    if (user) { el.className = 'smtp-status smtp-ok'; el.textContent = '✓ Konfiguriert'; }
+    else { el.className = 'smtp-status smtp-off'; el.textContent = '⚠ Nicht konfiguriert'; }
+  }
+
+  async function sendTestEmail() {
+    const to = document.getElementById('testEmailTo').value;
+    if (!to) return showToast('Empfänger-E-Mail eintragen', 'error');
+    const btn = document.getElementById('btnTestEmail');
+    btn.disabled = true; btn.textContent = '⏳ Sende...';
+    try {
+      await API.post('/api/admin/settings/test-email', { to });
+      showToast('Test-E-Mail gesendet an ' + to + ' ✓');
+    } catch(e) { showToast(e.message, 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Test-E-Mail senden'; }
+  }
+
+  // ── Signature ──────────────────────────────────────────────────────────────
+  function selectPos(el) {
+    document.querySelectorAll('#logoPosPicker .pos-opt').forEach(o => o.classList.remove('sel'));
+    el.classList.add('sel');
+    updateSigPreview();
+  }
+  function selectPosVal(val) {
+    document.querySelectorAll('#logoPosPicker .pos-opt').forEach(o => {
+      o.classList.toggle('sel', o.dataset.val === val);
+    });
+  }
+  function selectAlign(el) {
+    document.querySelectorAll('#logoAlignPicker .align-opt').forEach(o => o.classList.remove('sel'));
+    el.classList.add('sel');
+    updateSigPreview();
+  }
+  function selectAlignVal(val) {
+    document.querySelectorAll('#logoAlignPicker .align-opt').forEach(o => {
+      o.classList.toggle('sel', o.dataset.val === val);
+    });
+  }
+  function getSelPos() { return document.querySelector('#logoPosPicker .pos-opt.sel')?.dataset.val || 'top'; }
+  function getSelAlign() { return document.querySelector('#logoAlignPicker .align-opt.sel')?.dataset.val || 'left'; }
+
+  function updateSigPreview() {
+    const pos = getSelPos();
+    const align = getSelAlign();
+    const name = document.getElementById('s_company_name')?.value || settings.company_name || 'Okun Leads';
+    const phone = document.getElementById('s_company_phone')?.value || settings.company_phone || '';
+    const website = document.getElementById('s_company_website')?.value || settings.company_website || '';
+    const customLine = document.getElementById('s_sig_custom_line')?.value || '';
+    const logoSrc = '/img/brand-logo.png';
+
+    const logoHtml = `<img src="${logoSrc}" alt="${name}" style="height:32px;max-width:150px;object-fit:contain;display:block" onerror="this.style.display='none'">`;
+    const textHtml = `<div style="font-size:13px;color:#6b7280;line-height:1.7">
+      <strong style="color:#1f2937">${name}</strong><br>
+      ${phone ? `Tel: ${phone}<br>` : ''}
+      ${website ? `<a href="${website}" style="color:#2563eb">${website}</a><br>` : ''}
+      ${customLine ? customLine : ''}
+    </div>`;
+
+    const alignStyle = `text-align:${align}`;
+    let html = '';
+    if (pos === 'top') html = `<div style="${alignStyle}">${logoHtml}<div style="margin-top:8px">${textHtml}</div></div>`;
+    else if (pos === 'bottom') html = `<div style="${alignStyle}">${textHtml}<div style="margin-top:8px">${logoHtml}</div></div>`;
+    else if (pos === 'left') html = `<table><tr><td style="padding-right:14px;vertical-align:middle">${logoHtml}</td><td style="vertical-align:middle">${textHtml}</td></tr></table>`;
+    else if (pos === 'right') html = `<table><tr><td style="vertical-align:middle;padding-right:14px">${textHtml}</td><td style="vertical-align:middle">${logoHtml}</td></tr></table>`;
+
+    document.getElementById('sigPreviewInner').innerHTML = html;
+  }
+
+  async function saveSignature() {
+    await API.put('/api/admin/settings', {
+      sig_logo_position: getSelPos(),
+      sig_logo_align: getSelAlign(),
+      sig_custom_line: document.getElementById('s_sig_custom_line').value,
+    });
+    showToast('Signatur gespeichert ✓');
+  }
+
+  // ── Google OAuth ───────────────────────────────────────────────────────────
+  function updateCallbackUrl() {
+    const portalUrl = document.getElementById('s_portal_url')?.value || settings.portal_url || location.origin;
+    const url = portalUrl.replace(/\/$/, '') + '/api/auth/google/callback';
+    const el = document.getElementById('callbackUrl');
+    if (el) el.textContent = url;
+  }
+
+  function copyCallback() {
+    const url = document.getElementById('callbackUrl').textContent;
+    navigator.clipboard.writeText(url).then(() => showToast('URL kopiert!'));
+  }
+
+  async function saveGoogle() {
+    await API.put('/api/admin/settings', {
+      google_oauth_client_id: document.getElementById('s_google_oauth_client_id').value,
+      google_oauth_client_secret: document.getElementById('s_google_oauth_client_secret').value,
+    });
+    updateGoogleStatus();
+    showToast('Google Login gespeichert ✓');
+  }
+
+  function updateGoogleStatus() {
+    const el = document.getElementById('googleStatus');
+    const id = document.getElementById('s_google_oauth_client_id')?.value || settings.google_oauth_client_id;
+    if (id) { el.className = 'smtp-status smtp-ok'; el.textContent = '✓ Aktiv'; }
+    else { el.className = 'smtp-status smtp-off'; el.textContent = 'Nicht aktiv'; }
+  }
+
+  init();
+</script>
+</body>
+</html>

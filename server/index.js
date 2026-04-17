@@ -26,6 +26,7 @@ app.use('/api/admin/ai', require('./routes/admin/ai'));
 app.use('/api/admin/integrations', require('./routes/admin/integrations'));
 app.use('/api/admin/funnels', require('./routes/admin/funnels'));
 app.use('/api/admin/creative-templates', require('./routes/admin/creative-templates'));
+app.use('/api/admin/settings', require('./routes/admin/settings'));
 
 // Webhooks (public – no auth, optional secret)
 app.use('/api/webhooks', require('./routes/webhooks'));
