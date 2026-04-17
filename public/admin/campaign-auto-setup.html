@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kampagne Auto-Setup</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    .step-list { list-style: none; padding: 0; margin: 0; }
+    .step-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #6b7280; }
+    .step-item:last-child { border-bottom: none; }
+    .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; background: #f3f4f6; color: #9ca3af; }
+    .step-item.done .step-icon { background: #dcfce7; color: #16a34a; }
+    .step-item.active .step-icon { background: #eff6ff; color: #2563eb; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .step-item.done { color: #374151; }
+    .step-item.active { color: #1d4ed8; font-weight: 600; }
+    .result-section { margin-top: 20px; }
+    .creative-item { background: #f9fafb; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+    .creative-type { font-size: 10px; font-weight: 700; letter-spacing: .5px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+    .creative-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .creative-body { font-size: 12px; color: #4b5563; white-space: pre-wrap; }
+    .qual-item { background: #f9fafb; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+    .qual-q { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .qual-opts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .qual-opt { background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; padding: 3px 10px; font-size: 11px; color: #374151; }
+    .strategy-box { background: #f9fafb; border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.8; max-height: 250px; overflow-y: auto; white-space: pre-wrap; }
+    .live-section { background: linear-gradient(135deg, #4f46e5, #6366f1); color: #fff; border-radius: 12px; padding: 20px; margin-top: 20px; }
+    .live-section h3 { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
+    .live-section p { font-size: 13px; opacity: .85; margin: 0 0 14px; }
+    .big-btn { width: 100%; padding: 16px; font-size: 16px; font-weight: 700; border-radius: 10px; border: none; cursor: pointer; background: linear-gradient(135deg, #4f46e5, #6366f1); color: #fff; transition: opacity .2s; }
+    .big-btn:hover { opacity: .9; }
+    .big-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .input-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" onclick="location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Kunden &amp; Leads</span></div>
+      <div class="nav-item active" onclick="location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" onclick="location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-section"><span class="nav-section-label">Kampagnen</span></div>
+      <div class="nav-item" onclick="location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen-Übersicht</div>
+      <div class="nav-item" onclick="location.href='/admin/analytics.html'"><span class="nav-icon">&#128200;</span> Analytics</div>
+      <div class="nav-section"><span class="nav-section-label">Dokumente</span></div>
+      <div class="nav-item" onclick="location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px">
+          <a href="/admin/customers.html" style="color:var(--primary)">Kunden</a> ›
+          <span id="breadcrumbCustomer">...</span> ›
+          <span>Auto-Setup</span>
+        </div>
+        <h1 class="page-title">⚡ Kampagne Auto-Setup</h1>
+      </div>
+      <button class="btn btn-secondary" onclick="history.back()">← Zurück</button>
+    </div>
+
+    <div class="page-body">
+      <div class="setup-grid">
+
+        <!-- LEFT: Form -->
+        <div>
+          <div class="card" style="padding:24px" id="formCard">
+            <h2 style="font-size:16px;font-weight:700;margin:0 0 4px">Kampagnen-Daten eingeben</h2>
+            <p style="font-size:13px;color:#6b7280;margin:0 0 20px">KI erstellt danach automatisch: Strategie, Landing Page, Creatives &amp; Vorqualifizierung.</p>
+
+            <div class="form-group" style="margin-bottom:14px">
+              <label class="form-label">Kampagnenname</label>
+              <input type="text" id="campName" class="form-control" placeholder="z.B. Google Suche – Immobilien München">
+            </div>
+
+            <div class="input-grid-2" style="margin-bottom:14px">
+              <div class="form-group">
+                <label class="form-label">Plattform</label>
+                <select id="campPlatform" class="form-control">
+                  <option value="">-- Auswählen --</option>
+                  <option value="Meta Ads">Meta Ads (Facebook/Instagram)</option>
+                  <option value="Google">Google Ads</option>
+                  <option value="TikTok">TikTok</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Budget/Monat (€)</label>
+                <input type="number" id="campBudget" class="form-control" placeholder="z.B. 500">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:14px">
+              <label class="form-label">Stadt / Region</label>
+              <input type="text" id="campCity" class="form-control" placeholder="z.B. München, Bayern">
+            </div>
+
+            <div class="form-group" style="margin-bottom:14px">
+              <label class="form-label">Zielgruppe</label>
+              <input type="text" id="campTarget" class="form-control" placeholder="z.B. Hausbesitzer 45+, die verkaufen wollen">
+            </div>
+
+            <div class="form-group" style="margin-bottom:20px">
+              <label class="form-label">Aktuelle Situation &amp; Besonderheiten <span style="color:#6b7280;font-weight:400">(je mehr, desto besser)</span></label>
+              <textarea id="campDesc" class="form-control" rows="5" placeholder="z.B. Makler mit 15 Jahren Erfahrung in München Schwabing. Spezialisiert auf Wohnimmobilien 500k–1,5M€. Hat bereits 200+ Objekte vermittelt. Braucht mehr Eigentümer-Anfragen. Konkurrenz: viele Online-Makler ohne lokale Expertise..."></textarea>
+            </div>
+
+            <button class="big-btn" id="btnAutoSetup" onclick="runAutoSetup()">
+              ⚡ Alles automatisch erstellen
+            </button>
+          </div>
+        </div>
+
+        <!-- RIGHT: Progress + Results -->
+        <div>
+          <!-- Progress -->
+          <div class="card" style="padding:24px;margin-bottom:16px" id="progressCard">
+            <h3 style="font-size:14px;font-weight:700;margin:0 0 16px;color:#374151">Status</h3>
+            <ul class="step-list">
+              <li class="step-item" id="s1"><div class="step-icon">1</div><span>Kampagne anlegen</span></li>
+              <li class="step-item" id="s2"><div class="step-icon">2</div><span>KI analysiert &amp; plant alles</span></li>
+              <li class="step-item" id="s3"><div class="step-icon">3</div><span>Landing Page vorbereiten</span></li>
+              <li class="step-item" id="s4"><div class="step-icon">4</div><span>Creatives erstellen</span></li>
+              <li class="step-item" id="s5"><div class="step-icon">5</div><span>Vorqualifizierung konfigurieren</span></li>
+            </ul>
+          </div>
+
+          <!-- Results (hidden until done) -->
+          <div id="resultsCard" style="display:none">
+
+            <!-- Funnel -->
+            <div class="card" style="padding:20px;margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div style="font-size:14px;font-weight:700">🌐 Landing Page</div>
+                <span style="font-size:11px;background:#fef9c3;color:#92400e;border-radius:99px;padding:2px 10px;font-weight:600">Entwurf – noch nicht veröffentlicht</span>
+              </div>
+              <p style="font-size:13px;color:#6b7280;margin:0 0 12px">Inhalte sind fertig. Jetzt veröffentlichen damit sie live geht.</p>
+              <button class="btn btn-primary" id="btnPublish" onclick="publishFunnel()">🚀 Landing Page veröffentlichen</button>
+              <a id="lpLink" href="#" target="_blank" class="btn btn-outline btn-sm" style="margin-left:8px;display:none">🔗 Seite öffnen</a>
+            </div>
+
+            <!-- Strategy -->
+            <div class="card" style="padding:20px;margin-bottom:16px">
+              <div style="font-size:14px;font-weight:700;margin-bottom:10px">📋 Strategie</div>
+              <div id="strategyText" class="strategy-box"></div>
+            </div>
+
+            <!-- Creatives -->
+            <div class="card" style="padding:20px;margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-size:14px;font-weight:700">✍️ Ad-Creatives</div>
+                <a id="creativesLink" href="#" class="btn btn-sm btn-outline">Alle im KI-Studio</a>
+              </div>
+              <div id="creativesList"></div>
+            </div>
+
+            <!-- Qual Questions -->
+            <div class="card" style="padding:20px;margin-bottom:16px">
+              <div style="font-size:14px;font-weight:700;margin-bottom:10px">❓ Vorqualifizierungs-Fragen</div>
+              <div id="qualList"></div>
+            </div>
+
+            <!-- Go Live -->
+            <div class="live-section">
+              <h3>🟢 Kampagne live schalten</h3>
+              <p>Trage die IDs nach dem Start in Meta/Google ein um das Tracking zu aktivieren.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div>
+                  <label style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7);display:block;margin-bottom:4px">Meta Campaign ID</label>
+                  <input type="text" id="metaId" class="form-control" placeholder="act_XXXXXXXXX" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;">
+                </div>
+                <div>
+                  <label style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7);display:block;margin-bottom:4px">Google Campaign ID</label>
+                  <input type="text" id="googleId" class="form-control" placeholder="123456789" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;">
+                </div>
+              </div>
+              <button class="btn" style="background:#fff;color:#4f46e5;font-weight:700;width:100%" onclick="goLive()">✅ Kampagne ist live</button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999"></div>
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  const urlParams = new URLSearchParams(location.search);
+  const customerId = parseInt(urlParams.get('customer_id'));
+  let resultData = null;
+
+  async function init() {
+    if (!customerId) { location.href = '/admin/customers.html'; return; }
+    try {
+      const c = await API.get('/api/admin/customers/' + customerId);
+      document.getElementById('breadcrumbCustomer').textContent = c.company_name;
+      document.getElementById('campName').placeholder = c.company_name + ' – Kampagne';
+      if (c.address) document.getElementById('campCity').value = c.address;
+    } catch(e) {}
+  }
+
+  function setStep(n, state) {
+    const el = document.getElementById('s' + n);
+    el.classList.remove('done', 'active');
+    if (state) el.classList.add(state);
+    if (state === 'done') el.querySelector('.step-icon').textContent = '✓';
+    if (state === 'active') el.querySelector('.step-icon').textContent = '⏳';
+  }
+
+  async function runAutoSetup() {
+    const btn = document.getElementById('btnAutoSetup');
+    btn.disabled = true;
+    btn.textContent = '⏳ KI arbeitet...';
+    document.getElementById('resultsCard').style.display = 'none';
+
+    // Reset steps
+    for (let i = 1; i <= 5; i++) {
+      const el = document.getElementById('s' + i);
+      el.classList.remove('done', 'active');
+      el.querySelector('.step-icon').textContent = i;
+    }
+
+    setStep(1, 'active');
+    // Fake progress while waiting
+    const fakeProgress = setTimeout(() => { setStep(1,'done'); setStep(2,'active'); }, 1500);
+    const fakeProgress2 = setTimeout(() => { setStep(2,'done'); setStep(3,'active'); }, 8000);
+
+    try {
+      const res = await API.post('/api/admin/ai/auto-campaign', {
+        customer_id: customerId,
+        name: document.getElementById('campName').value || null,
+        platform: document.getElementById('campPlatform').value || null,
+        budget: parseFloat(document.getElementById('campBudget').value) || 0,
+        city: document.getElementById('campCity').value || null,
+        target_audience: document.getElementById('campTarget').value || null,
+        description: document.getElementById('campDesc').value || null,
+      });
+
+      clearTimeout(fakeProgress); clearTimeout(fakeProgress2);
+      setStep(1,'done'); setStep(2,'done'); setStep(3,'done'); setStep(4,'done'); setStep(5,'done');
+
+      resultData = res;
+      showResults(res);
+      showToast('Fertig! Alle Assets wurden erstellt.');
+    } catch(e) {
+      clearTimeout(fakeProgress); clearTimeout(fakeProgress2);
+      showToast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚡ Nochmal erstellen';
+    }
+  }
+
+  function showResults(res) {
+    document.getElementById('resultsCard').style.display = 'block';
+    document.getElementById('creativesLink').href = '/admin/ai-tools.html?customer_id=' + customerId;
+
+    // Strategy
+    document.getElementById('strategyText').textContent = res.strategy || '';
+
+    // Creatives
+    const typeLabel = { hook:'Hook', headline:'Headline', body:'Anzeigentext', cta:'CTA' };
+    const typeColor = { hook:'#eff6ff', headline:'#fdf4ff', body:'#f0fdf4', cta:'#fff7ed' };
+    document.getElementById('creativesList').innerHTML = (res.ad_creatives || []).map(cr => `
+      <div class="creative-item" style="background:${typeColor[cr.type]||'#f9fafb'}">
+        <div class="creative-type">${typeLabel[cr.type] || cr.type}</div>
+        <div class="creative-title">${cr.title}</div>
+        <div class="creative-body">${cr.content}</div>
+      </div>`).join('');
+
+    // Qual questions
+    document.getElementById('qualList').innerHTML = (res.qualification_questions || []).map((q, i) => `
+      <div class="qual-item">
+        <div class="qual-q">${i+1}. ${q.question}</div>
+        <div class="qual-opts">${(q.options || []).map(o => `<span class="qual-opt">${o}</span>`).join('')}</div>
+      </div>`).join('');
+  }
+
+  async function publishFunnel() {
+    if (!resultData?.funnel_id) return;
+    const btn = document.getElementById('btnPublish');
+    btn.disabled = true; btn.textContent = '⏳ Veröffentliche...';
+    try {
+      const res = await API.post('/api/admin/funnels/' + resultData.funnel_id + '/publish', {});
+      btn.textContent = '✅ Veröffentlicht!';
+      const link = document.getElementById('lpLink');
+      link.href = res.url || '/f/' + res.slug + '/';
+      link.style.display = 'inline-flex';
+      showToast('Landing Page ist live!');
+    } catch(e) { showToast(e.message, 'error'); btn.disabled = false; btn.textContent = '🚀 Landing Page veröffentlichen'; }
+  }
+
+  async function goLive() {
+    if (!resultData?.campaign_id) return;
+    const metaId = document.getElementById('metaId').value.trim();
+    const googleId = document.getElementById('googleId').value.trim();
+    try {
+      await API.put('/api/admin/campaigns/' + resultData.campaign_id, {
+        status: 'active',
+        meta_campaign_id: metaId || null,
+        google_campaign_id: googleId || null,
+      });
+      showToast('Kampagne ist live! 🎉');
+      setTimeout(() => location.href = '/admin/campaign-wizard.html?campaign_id=' + resultData.campaign_id + '&customer_id=' + customerId, 1500);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  init();
+</script>
+</body>
+</html>

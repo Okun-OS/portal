@@ -246,8 +246,9 @@
       </div>`;
     }).join('');
 
-    html += `<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e5e7eb">
-      <button class="btn btn-sm btn-outline" onclick="location.href='/admin/campaign-wizard.html?customer_id=${customerId}'">+ Neue Kampagne</button>
+    html += `<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e5e7eb;display:flex;gap:8px">
+      <button class="btn btn-sm btn-primary" onclick="location.href='/admin/campaign-auto-setup.html?customer_id=${customerId}'">⚡ Auto-Setup</button>
+      <button class="btn btn-sm btn-outline" onclick="location.href='/admin/campaign-wizard.html?customer_id=${customerId}'">+ Manuell</button>
     </div>`;
 
     el.innerHTML = html || '<div class="text-muted text-sm" style="padding:8px 0">Noch keine Kampagnen.</div>';

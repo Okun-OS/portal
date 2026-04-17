@@ -235,4 +235,102 @@ router.delete('/creatives/:id', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ── POST /api/admin/ai/auto-campaign ─────────────────────────────────────────
+// One-click: create campaign + funnel + creatives + strategy + qual questions
+router.post('/auto-campaign', requireAdmin, async (req, res) => {
+  const { customer_id, campaign_id, name, platform, budget, city, description, target_audience } = req.body;
+  if (!customer_id) return res.status(400).json({ error: 'customer_id erforderlich' });
+
+  const { getTemplate } = require('../../funnelTemplates');
+
+  try {
+    const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customer_id);
+    if (!customer) return res.status(404).json({ error: 'Kunde nicht gefunden' });
+
+    // 1. Create or update campaign
+    let campId = campaign_id ? parseInt(campaign_id) : null;
+    const campName = name || customer.company_name + ' – Kampagne';
+    if (!campId) {
+      const r = db.prepare(`
+        INSERT INTO campaigns (customer_id, name, platform, budget_monthly, description, target_audience, status, wizard_step)
+        VALUES (?, ?, ?, ?, ?, ?, 'active', 6)
+      `).run(customer_id, campName, platform || null, parseFloat(budget) || 0, description || null, target_audience || null);
+      campId = r.lastInsertRowid;
+    } else {
+      db.prepare(`UPDATE campaigns SET name=?, platform=?, budget_monthly=?, description=?, target_audience=?, wizard_step=6, updated_at=datetime('now') WHERE id=?`)
+        .run(campName, platform || null, parseFloat(budget) || 0, description || null, target_audience || null, campId);
+    }
+
+    // 2. Pick best template
+    const industry = (customer.industry || '').toLowerCase();
+    let templateId = 'makler_v1';
+    if (/solar|photovoltaik|pv|energie/.test(industry)) templateId = 'solar_v1';
+    const customTpl = db.prepare("SELECT template_id FROM custom_templates ORDER BY created_at DESC LIMIT 1").get();
+    if (customTpl) templateId = customTpl.template_id;
+    const tpl = getTemplate(templateId) || getTemplate('makler_v1');
+    if (tpl) templateId = tpl.id || templateId;
+
+    // 3. Create funnel
+    const funnelName = campName + ' – Landing Page';
+    const fr = db.prepare(`
+      INSERT INTO funnels (customer_id, campaign_id, template_id, name, status, fields, text_slots, image_slots)
+      VALUES (?, ?, ?, ?, 'draft', '{}', '{}', '{}')
+    `).run(customer_id, campId, templateId, funnelName);
+    const funnelId = fr.lastInsertRowid;
+
+    // 4. AI: generate everything in one call
+    const tplDef = getTemplate(templateId);
+    const textSlots = tplDef ? tplDef.text_slots.filter(s => s.ai_generated) : [];
+    const aiResult = await ai.generateAutoSetup({
+      company: customer.company_name,
+      industry: customer.industry || '',
+      city: city || customer.address || '',
+      budget: parseFloat(budget) || 0,
+      platform: platform || 'Meta Ads',
+      description: description || '',
+      targetAudience: target_audience || '',
+      templateTextSlots: textSlots,
+    });
+
+    // 5. Fill funnel fields + qual questions + text_slots
+    const fields = {
+      firmen_name: customer.company_name,
+      makler_name: customer.contact_name || customer.company_name,
+      stadt: city || customer.address || '',
+      region: city || customer.address || '',
+      telefon: customer.phone || '',
+      email: customer.email || '',
+      zielgruppe: aiResult.target_audience || target_audience || '',
+      usp: aiResult.usp || '',
+      __qual_steps: aiResult.qualification_questions || [],
+    };
+    db.prepare(`UPDATE funnels SET fields=?, text_slots=?, updated_at=datetime('now') WHERE id=?`)
+      .run(JSON.stringify(fields), JSON.stringify(aiResult.text_slots || {}), funnelId);
+
+    // 6. Save ad creatives
+    for (const cr of (aiResult.ad_creatives || [])) {
+      db.prepare(`INSERT INTO ad_creatives (customer_id, campaign_id, type, title, content, status, source) VALUES (?,?,?,?,?,'draft','ai')`)
+        .run(customer_id, campId, cr.type, cr.title, cr.content);
+    }
+
+    // 7. Save strategy
+    db.prepare(`INSERT INTO ai_analyses (customer_id, campaign_id, type, result, created_by) VALUES (?,?,'strategy',?,'auto-setup')`)
+      .run(customer_id, campId, aiResult.strategy);
+
+    res.json({
+      campaign_id: campId,
+      campaign_name: campName,
+      funnel_id: funnelId,
+      template_id: templateId,
+      strategy: aiResult.strategy,
+      ad_creatives: aiResult.ad_creatives || [],
+      qualification_questions: aiResult.qualification_questions || [],
+    });
+
+  } catch (err) {
+    console.error('[auto-campaign]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

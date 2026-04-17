@@ -387,4 +387,54 @@ Alle Texte auf Deutsch. Fokus auf Conversion und Eigentümer-Leads.`;
   return JSON.parse(match[0]);
 }
 
-module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient, generateCampaignPlan };
+// 8. Auto-Setup: one AI call generates everything for a campaign
+async function generateAutoSetup({ company, industry, city, budget, platform, description, targetAudience, templateTextSlots }) {
+  const system = `Du bist ein Performance-Marketing-Experte der vollständige Kampagnen für lokale Unternehmen erstellt.
+Antworte AUSSCHLIESSLICH mit gültigem JSON – kein Text außerhalb des JSON-Blocks.`;
+
+  const slotList = (templateTextSlots || []).map(s =>
+    `    "${s.key}": "${s.label} (max ${s.max_chars || 100} Zeichen)"`
+  ).join(',\n');
+
+  const prompt = `Erstelle eine komplette Performance-Marketing-Kampagne auf Deutsch.
+
+UNTERNEHMEN: ${company}
+BRANCHE: ${industry || 'Nicht angegeben'}
+STANDORT: ${city || 'Nicht angegeben'}
+BUDGET: ${budget || 0}€/Monat
+PLATTFORM: ${platform || 'Meta/Google'}
+AKTUELLE SITUATION: ${description || 'Nicht angegeben'}
+ZIELGRUPPE: ${targetAudience || 'Nicht angegeben'}
+
+Antworte MIT GENAU diesem JSON (alle Felder ausfüllen):
+{
+  "strategy": "Strategie-Text 300-400 Wörter – konkrete Empfehlungen für diese Kampagne",
+  "usp": "Einzigartiger Vorteil max 80 Zeichen",
+  "target_audience": "Zielgruppe präzise max 100 Zeichen",
+  "text_slots": {
+${slotList || '    "headline": "Hauptüberschrift"'}
+  },
+  "ad_creatives": [
+    {"type": "hook", "title": "Hook 1", "content": "Aufmerksamkeitsstarker Einstieg 2-3 Sätze"},
+    {"type": "hook", "title": "Hook 2", "content": "Alternativer Einstieg 2-3 Sätze"},
+    {"type": "headline", "title": "Headline 1", "content": "Anzeigentitel max 40 Zeichen"},
+    {"type": "headline", "title": "Headline 2", "content": "Alternativer Titel max 40 Zeichen"},
+    {"type": "body", "title": "Anzeigentext", "content": "Anzeigentext 3-4 Sätze überzeugend"},
+    {"type": "cta", "title": "Call to Action", "content": "Button-Text max 25 Zeichen"}
+  ],
+  "qualification_questions": [
+    {"question": "Vorqualifizierungsfrage 1", "type": "radio", "options": ["Option A", "Option B", "Option C"]},
+    {"question": "Vorqualifizierungsfrage 2", "type": "radio", "options": ["Ja", "Nein"]},
+    {"question": "Vorqualifizierungsfrage 3", "type": "radio", "options": ["Option A", "Option B", "Option C"]},
+    {"question": "Vorqualifizierungsfrage 4", "type": "radio", "options": ["Option A", "Option B"]},
+    {"question": "Vorqualifizierungsfrage 5", "type": "radio", "options": ["Ja", "Nein", "Unsicher"]}
+  ]
+}`;
+
+  const text = await generate(system, prompt, 4096);
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('KI-Antwort enthielt kein JSON');
+  return JSON.parse(match[0]);
+}
+
+module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient, generateCampaignPlan, generateAutoSetup };
