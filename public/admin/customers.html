@@ -29,7 +29,7 @@
 <div class="app-layout">
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div>
+      <div class="sidebar-logo"><img src="/img/brand-logo.png" alt="Okun Leads" class="brand-logo-img" onerror="this.style.display='none'"><span class="brand-logo-text">Okun Leads</span><span class="sidebar-badge admin">Admin</span></div>
     </div>
     <nav class="sidebar-nav">
   <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
@@ -99,7 +99,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">E-Mail <span class="required">*</span></label>
-            <input type="email" id="fEmail" class="form-control" placeholder="max@firma.de" oninput="if(!document.getElementById('customerId').value && !document.getElementById('fLoginEmail').value) document.getElementById('fLoginEmail').value = this.value">
+            <input type="email" id="fEmail" class="form-control" placeholder="max@firma.de">
           </div>
           <div class="form-group">
             <label class="form-label">Telefon</label>
@@ -130,31 +130,35 @@
 
       <!-- Tab: Login -->
       <div id="tabLogin" class="tab-content">
-        <div id="loginExistsInfo" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
-          ✅ <strong>Kundenportal-Zugang vorhanden.</strong> Login-E-Mail: <span id="existingLoginEmail"></span><br>
-          <span style="color:#6b7280">Passwort-Feld leer lassen um es nicht zu ändern. Unten "Passwort zurücksetzen" nutzen.</span>
-        </div>
-        <div id="loginMissingInfo" style="display:none;background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
-          ⚠️ <strong>Noch kein Kundenportal-Zugang.</strong> Zugangsdaten unten eintragen damit der Kunde sich einloggen kann.
-        </div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label">Login E-Mail <span class="required">*</span></label>
-            <input type="email" id="fLoginEmail" class="form-control" placeholder="login@firma.de">
-            <div style="font-size:11px;color:#6b7280;margin-top:3px">Damit loggt sich der Kunde im Portal ein</div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Passwort <span class="required">*</span></label>
-            <div style="display:flex;gap:6px">
-              <input type="text" id="fLoginPw" class="form-control" placeholder="Mindestens 6 Zeichen">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="generatePassword()" style="white-space:nowrap;flex-shrink:0">🎲 Generieren</button>
+        <!-- Has login -->
+        <div id="loginExistsInfo" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:4px">✅ Portal-Zugang vorhanden</div>
+              <div style="font-size:13px;color:#374151">Login-E-Mail: <strong id="existingLoginEmail"></strong></div>
+              <div style="font-size:12px;color:#6b7280;margin-top:6px" id="loginActivityInfo"></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onclick="sendWelcomeEmail()" class="btn btn-sm btn-primary">📧 Zugangsdaten senden</button>
+              <button onclick="openResetPw(currentCustomerId)" class="btn btn-sm btn-secondary">🔑 Passwort reset</button>
             </div>
           </div>
         </div>
-        <div id="loginCredentialsBox" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin-top:8px;font-size:13px">
-          📋 <strong>Zugangsdaten für den Kunden:</strong><br>
-          <span style="font-family:monospace">E-Mail: <span id="credEmail"></span> | Passwort: <span id="credPw"></span></span>
-          <button onclick="copyCredentials()" class="btn btn-sm btn-outline" style="margin-left:8px;font-size:11px">Kopieren</button>
+        <!-- No login yet -->
+        <div id="loginMissingInfo" style="display:none;background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:16px;margin-bottom:14px;font-size:13px">
+          ⚠️ <strong>Noch kein Zugang.</strong> Bei neuen Kunden wird der Zugang automatisch beim Erstellen angelegt und die E-Mail versendet.
+          <div style="margin-top:10px">
+            <button onclick="createLoginManually()" class="btn btn-sm btn-primary">+ Zugang jetzt erstellen &amp; E-Mail senden</button>
+          </div>
+        </div>
+        <!-- Credentials display box -->
+        <div id="loginCredentialsBox" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;font-size:13px">
+          <div style="font-weight:600;margin-bottom:8px">📋 Zugangsdaten (jetzt speichern!):</div>
+          <div style="font-family:monospace;background:#fff;border-radius:6px;padding:10px 14px;line-height:2;border:1px solid #dbeafe">
+            E-Mail: <strong id="credEmail"></strong><br>
+            Passwort: <strong id="credPw"></strong>
+          </div>
+          <button onclick="copyCredentials()" class="btn btn-sm btn-outline" style="margin-top:8px">📋 In Zwischenablage</button>
         </div>
       </div>
 
@@ -306,7 +310,11 @@
         <td>
           ${c.spend_30d ? `<span style="font-weight:600;color:#c2410c">${parseFloat(c.spend_30d).toFixed(0)}€</span><br><span class="text-sm text-muted">letzten 30T</span>` : '<span class="text-muted">—</span>'}
         </td>
-        <td>${statusBadge(c.login_email ? 'active' : 'paused')}<br><span class="text-sm text-muted">${c.login_email || 'Kein Login'}</span></td>
+        <td>
+          ${statusBadge(c.login_email ? 'active' : 'paused')}
+          ${c.login_email ? `<br><span class="text-sm text-muted">${c.last_login_at ? '🕐 ' + fmtRelTime(c.last_login_at) : 'Nie eingeloggt'}</span>` : '<br><span class="text-sm text-muted">Kein Login</span>'}
+          ${c.login_count > 0 ? `<br><span style="font-size:10px;color:#9ca3af">${c.login_count}× eingeloggt</span>` : ''}
+        </td>
         <td>
           <div class="table-actions">
             <button class="btn btn-sm btn-secondary" onclick="editCustomer(${c.id})">Bearbeiten</button>
@@ -338,13 +346,20 @@
     renderTable(filtered);
   }
 
-  // ── Open/edit customer ─────────────────────────────────────────────────────
-  function generatePassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
-    const pw = Array.from({length: 10}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    document.getElementById('fLoginPw').value = pw;
+  function fmtRelTime(iso) {
+    if (!iso) return 'nie';
+    const diff = Date.now() - new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+    const m = Math.floor(diff / 60000);
+    if (m < 2) return 'gerade eben';
+    if (m < 60) return `vor ${m} Min.`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `vor ${h} Std.`;
+    const d = Math.floor(h / 24);
+    if (d < 30) return `vor ${d} Tag${d > 1 ? 'en' : ''}`;
+    return new Date(iso).toLocaleDateString('de-DE');
   }
 
+  // ── Open/edit customer ─────────────────────────────────────────────────────
   function copyCredentials() {
     const text = 'E-Mail: ' + document.getElementById('credEmail').textContent + '\nPasswort: ' + document.getElementById('credPw').textContent;
     navigator.clipboard.writeText(text).then(() => showToast('Zugangsdaten kopiert!'));
@@ -354,15 +369,13 @@
     currentCustomerId = null;
     document.getElementById('customerModalTitle').textContent = 'Neuer Kunde';
     document.getElementById('customerId').value = '';
-    ['fCompany','fContact','fEmail','fPhone','fAddress','fNotes','fLoginEmail','fLoginPw'].forEach(id => document.getElementById(id).value = '');
+    ['fCompany','fContact','fEmail','fPhone','fAddress','fNotes'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('fIndustry').value = '';
     ['tab-btn-perf','tab-btn-creatives'].forEach(id => document.getElementById(id).style.display = 'none');
     document.getElementById('loginExistsInfo').style.display = 'none';
     document.getElementById('loginMissingInfo').style.display = 'none';
     document.getElementById('loginCredentialsBox').style.display = 'none';
     document.getElementById('formError').textContent = '';
-    // Auto-generate password for new customers
-    generatePassword();
     switchTab('tabInfo');
     openModal('modalCustomer');
   }
@@ -380,18 +393,20 @@
       document.getElementById('fIndustry').value = c.industry || '';
       document.getElementById('fAddress').value = c.address || '';
       document.getElementById('fNotes').value = c.notes || '';
-      document.getElementById('fLoginEmail').value = c.login_email || '';
-      document.getElementById('fLoginPw').value = '';
       document.getElementById('formError').textContent = '';
       document.getElementById('loginCredentialsBox').style.display = 'none';
       if (c.login_email) {
         document.getElementById('loginExistsInfo').style.display = 'block';
         document.getElementById('loginMissingInfo').style.display = 'none';
         document.getElementById('existingLoginEmail').textContent = c.login_email;
+        const actParts = [];
+        if (c.last_login_at) actParts.push('Zuletzt aktiv: ' + fmtRelTime(c.last_login_at));
+        else actParts.push('Noch nie eingeloggt');
+        if (c.login_count > 0) actParts.push(c.login_count + '× eingeloggt');
+        document.getElementById('loginActivityInfo').textContent = actParts.join(' · ');
       } else {
         document.getElementById('loginExistsInfo').style.display = 'none';
         document.getElementById('loginMissingInfo').style.display = 'block';
-        generatePassword();
       }
       ['tab-btn-perf','tab-btn-creatives'].forEach(id => document.getElementById(id).style.display = '');
       switchTab('tabInfo');
@@ -512,23 +527,17 @@
       industry: document.getElementById('fIndustry').value,
       address: document.getElementById('fAddress').value,
       notes: document.getElementById('fNotes').value,
-      login_email: document.getElementById('fLoginEmail').value,
-      login_password: document.getElementById('fLoginPw').value,
     };
     try {
       if (id) {
         await API.put('/api/admin/customers/' + id, body);
-        if (body.login_email && body.login_password) {
-          try {
-            await API.post('/api/admin/customers/' + id + '/create-login', { login_email: body.login_email, login_password: body.login_password });
-            showCredentials(body.login_email, body.login_password);
-          } catch(e) { if (!e.message?.includes('bereits')) showToast('Login-Fehler: ' + e.message, 'error'); }
-        }
+        showToast('Kunde aktualisiert');
       } else {
-        await API.post('/api/admin/customers', body);
-        if (body.login_email && body.login_password) showCredentials(body.login_email, body.login_password);
+        const res = await API.post('/api/admin/customers', body);
+        showCredentials(res.login_email, res.login_password);
+        const emailMsg = res.email_status === 'sent' ? ' · E-Mail versendet ✓' : res.email_status === 'failed' ? ' · E-Mail Fehler' : '';
+        showToast('Kunde erstellt ✓' + emailMsg);
       }
-      showToast(id ? 'Kunde aktualisiert' : 'Kunde erstellt ✓');
       loadCustomers();
     } catch(e) { document.getElementById('formError').textContent = e.message; }
   }
@@ -537,7 +546,32 @@
     document.getElementById('credEmail').textContent = email;
     document.getElementById('credPw').textContent = password;
     document.getElementById('loginCredentialsBox').style.display = 'block';
+    document.getElementById('loginExistsInfo').style.display = 'none';
+    document.getElementById('loginMissingInfo').style.display = 'none';
     switchTab('tabLogin');
+  }
+
+  async function createLoginManually() {
+    if (!currentCustomerId) return;
+    try {
+      const res = await API.post('/api/admin/customers/' + currentCustomerId + '/create-login', {});
+      showCredentials(res.login_email, res.login_password);
+      const emailMsg = res.email_status === 'sent' ? ' · E-Mail versendet ✓' : '';
+      showToast('Zugang erstellt' + emailMsg);
+      loadCustomers();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function sendWelcomeEmail() {
+    if (!currentCustomerId) return;
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = '⏳ Sende...';
+    try {
+      const res = await API.post('/api/admin/customers/' + currentCustomerId + '/send-welcome', {});
+      showCredentials(document.getElementById('existingLoginEmail').textContent, res.login_password);
+      showToast('Zugangsdaten per E-Mail gesendet ✓');
+    } catch(e) { showToast(e.message, 'error'); }
+    finally { btn.disabled = false; btn.textContent = '📧 Zugangsdaten senden'; }
   }
 
   function openResetPw(id) {

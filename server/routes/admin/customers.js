@@ -3,6 +3,12 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../../db');
 const { requireAdmin } = require('../../middleware/auth');
+const mailer = require('../../services/mailer');
+
+function generatePassword(len = 12) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
 
 // GET /api/admin/customers
 router.get('/', requireAdmin, (req, res) => {
@@ -69,35 +75,45 @@ router.get('/:id', requireAdmin, (req, res) => {
 });
 
 // POST /api/admin/customers
-router.post('/', requireAdmin, (req, res) => {
-  const { company_name, contact_name, email, phone, address, industry, notes, login_email, login_password } = req.body;
+router.post('/', requireAdmin, async (req, res) => {
+  const { company_name, contact_name, email, phone, address, industry, notes } = req.body;
 
   if (!company_name || !contact_name || !email) {
     return res.status(400).json({ error: 'Firmenname, Ansprechpartner und E-Mail erforderlich' });
   }
 
-  let userId = null;
-
-  // Create login user if credentials provided
-  if (login_email && login_password) {
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(login_email.toLowerCase().trim());
-    if (existing) {
-      return res.status(400).json({ error: 'Diese E-Mail ist bereits als Login vergeben' });
-    }
-    const hash = bcrypt.hashSync(login_password, 10);
-    const result = db.prepare(`
-      INSERT INTO users (email, password, role, name)
-      VALUES (?, ?, 'client', ?)
-    `).run(login_email.toLowerCase().trim(), hash, contact_name);
-    userId = result.lastInsertRowid;
+  // Auto-create login using customer email
+  const loginEmail = email.toLowerCase().trim();
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(loginEmail);
+  if (existing) {
+    return res.status(400).json({ error: 'Diese E-Mail ist bereits als Login vergeben' });
   }
+
+  const password = generatePassword();
+  const hash = bcrypt.hashSync(password, 10);
+  const userResult = db.prepare(`INSERT INTO users (email, password, role, name) VALUES (?, ?, 'client', ?)`)
+    .run(loginEmail, hash, contact_name);
+  const userId = userResult.lastInsertRowid;
 
   const result = db.prepare(`
     INSERT INTO customers (user_id, company_name, contact_name, email, phone, address, industry, notes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(userId, company_name, contact_name, email, phone || null, address || null, industry || null, notes || null);
 
-  res.status(201).json({ id: result.lastInsertRowid, message: 'Kunde erstellt' });
+  const customerId = result.lastInsertRowid;
+  const customer = { company_name, contact_name, email };
+
+  // Send welcome email (non-blocking – errors don't fail the request)
+  let emailStatus = 'skipped';
+  try {
+    const mailResult = await mailer.sendWelcomeEmail({ customer, loginEmail, password });
+    emailStatus = mailResult.sent ? 'sent' : 'skipped';
+  } catch (e) {
+    console.error('[mailer] welcome email failed:', e.message);
+    emailStatus = 'failed';
+  }
+
+  res.status(201).json({ id: customerId, login_email: loginEmail, login_password: password, email_status: emailStatus });
 });
 
 // PUT /api/admin/customers/:id
@@ -126,27 +142,56 @@ router.put('/:id', requireAdmin, (req, res) => {
 });
 
 // POST /api/admin/customers/:id/create-login
-router.post('/:id/create-login', requireAdmin, (req, res) => {
+router.post('/:id/create-login', requireAdmin, async (req, res) => {
   const { login_email, login_password } = req.body;
-  if (!login_email || !login_password) {
-    return res.status(400).json({ error: 'E-Mail und Passwort erforderlich' });
-  }
 
   const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
   if (!customer) return res.status(404).json({ error: 'Kunde nicht gefunden' });
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(login_email.toLowerCase().trim());
-  if (existing) return res.status(400).json({ error: 'E-Mail bereits vergeben' });
+  const email = (login_email || customer.email).toLowerCase().trim();
+  const password = login_password || generatePassword();
 
-  const hash = bcrypt.hashSync(login_password, 10);
-  const result = db.prepare(`
-    INSERT INTO users (email, password, role, name) VALUES (?, ?, 'client', ?)
-  `).run(login_email.toLowerCase().trim(), hash, customer.contact_name);
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (existing && existing.id !== customer.user_id) {
+    return res.status(400).json({ error: 'E-Mail bereits vergeben' });
+  }
+
+  const hash = bcrypt.hashSync(password, 10);
+  const result = db.prepare(`INSERT INTO users (email, password, role, name) VALUES (?, ?, 'client', ?)`)
+    .run(email, hash, customer.contact_name);
 
   db.prepare('UPDATE customers SET user_id = ?, updated_at = datetime("now") WHERE id = ?')
     .run(result.lastInsertRowid, req.params.id);
 
-  res.json({ success: true, message: 'Login erstellt' });
+  let emailStatus = 'skipped';
+  try {
+    const mailResult = await mailer.sendWelcomeEmail({ customer, loginEmail: email, password });
+    emailStatus = mailResult.sent ? 'sent' : 'skipped';
+  } catch (e) {
+    console.error('[mailer] welcome email failed:', e.message);
+    emailStatus = 'failed';
+  }
+
+  res.json({ success: true, login_email: email, login_password: password, email_status: emailStatus });
+});
+
+// POST /api/admin/customers/:id/send-welcome  – resend welcome email
+router.post('/:id/send-welcome', requireAdmin, async (req, res) => {
+  const customer = db.prepare('SELECT c.*, u.email as login_email FROM customers c LEFT JOIN users u ON u.id = c.user_id WHERE c.id = ?').get(req.params.id);
+  if (!customer) return res.status(404).json({ error: 'Kunde nicht gefunden' });
+  if (!customer.login_email) return res.status(400).json({ error: 'Kein Login vorhanden' });
+
+  const { new_password } = req.body;
+  const password = new_password || generatePassword();
+  const hash = bcrypt.hashSync(password, 10);
+  db.prepare('UPDATE users SET password = ?, updated_at = datetime("now") WHERE id = ?').run(hash, customer.user_id);
+
+  try {
+    await mailer.sendWelcomeEmail({ customer, loginEmail: customer.login_email, password });
+    res.json({ success: true, login_password: password });
+  } catch (e) {
+    res.status(500).json({ error: 'E-Mail konnte nicht gesendet werden: ' + e.message });
+  }
 });
 
 // PUT /api/admin/customers/:id/reset-password

@@ -268,4 +268,13 @@ db.exec(`
   );
 `);
 
+// Customer activity tracking
+const activityMigrations = [
+  'ALTER TABLE customers ADD COLUMN last_login_at TEXT',
+  'ALTER TABLE customers ADD COLUMN login_count INTEGER NOT NULL DEFAULT 0',
+];
+for (const sql of activityMigrations) {
+  try { db.exec(sql); } catch { /* column already exists */ }
+}
+
 module.exports = db;

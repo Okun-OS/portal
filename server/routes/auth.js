@@ -22,11 +22,14 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Ungültige Anmeldedaten' });
   }
 
-  // Get customer_id if client
+  // Get customer_id if client and track login activity
   let customerId = null;
   if (user.role === 'client') {
     const customer = db.prepare('SELECT id FROM customers WHERE user_id = ?').get(user.id);
     customerId = customer ? customer.id : null;
+    if (customerId) {
+      db.prepare(`UPDATE customers SET last_login_at = datetime('now'), login_count = login_count + 1 WHERE id = ?`).run(customerId);
+    }
   }
 
   const token = jwt.sign(

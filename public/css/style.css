@@ -122,6 +122,21 @@ a:hover { text-decoration: underline; }
   font-size: 15px;
 }
 
+.brand-logo-img {
+  height: 34px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  display: block;
+}
+
+.brand-logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -.2px;
+}
+
 .sidebar-logo .logo-dot {
   width: 32px;
   height: 32px;
