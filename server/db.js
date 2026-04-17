@@ -255,4 +255,17 @@ for (const sql of migrations) {
   try { db.exec(sql); } catch { /* column already exists */ }
 }
 
+// Creative template library (Canva uploads)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS creative_template_assets (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    format      TEXT NOT NULL DEFAULT 'post', -- 'post' | 'story' | 'banner' | 'square'
+    file_path   TEXT NOT NULL,
+    placeholders TEXT NOT NULL DEFAULT '[]', -- JSON: [{key, label, source}]
+    notes       TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 module.exports = db;

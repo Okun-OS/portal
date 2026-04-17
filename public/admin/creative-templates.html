@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kreativ-Vorlagen</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .tpl-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; position: relative; }
+    .tpl-card:hover { border-color: var(--primary); }
+    .tpl-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; background: #f3f4f6; }
+    .tpl-img.story { aspect-ratio: 9/16; max-height: 300px; object-fit: cover; }
+    .tpl-img.banner { aspect-ratio: 1.91/1; }
+    .tpl-body { padding: 10px 12px; }
+    .tpl-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+    .tpl-format { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; }
+    .tpl-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .placeholder-tag { display: inline-flex; align-items: center; gap: 4px; background: #eff6ff; color: #1d4ed8; border-radius: 99px; padding: 2px 8px; font-size: 11px; margin: 2px; font-family: monospace; }
+    .upload-zone { border: 2px dashed #d1d5db; border-radius: 10px; padding: 32px; text-align: center; cursor: pointer; transition: border-color .2s; }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--primary); background: #eff6ff; }
+    .upload-zone input { display: none; }
+    .upload-preview { max-height: 160px; max-width: 100%; border-radius: 8px; margin-top: 12px; }
+    .brief-card { background: #f9fafb; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+    .brief-field { display: flex; justify-content: space-between; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid #e5e7eb; gap: 12px; }
+    .brief-field:last-child { border-bottom: none; }
+    .brief-key { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; font-family: monospace; flex-shrink: 0; }
+    .brief-val { font-size: 13px; color: #111827; text-align: right; word-break: break-word; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" onclick="location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Kunden &amp; Leads</span></div>
+      <div class="nav-item" onclick="location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" onclick="location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-section"><span class="nav-section-label">Kampagnen</span></div>
+      <div class="nav-item" onclick="location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen-Übersicht</div>
+      <div class="nav-item" onclick="location.href='/admin/analytics.html'"><span class="nav-icon">&#128200;</span> Analytics</div>
+      <div class="nav-section"><span class="nav-section-label">Assets</span></div>
+      <div class="nav-item active" onclick="location.href='/admin/creative-templates.html'"><span class="nav-icon">&#127912;</span> Kreativ-Vorlagen</div>
+      <div class="nav-item" onclick="location.href='/admin/ai-tools.html'"><span class="nav-icon">&#129504;</span> KI-Studio</div>
+      <div class="nav-section"><span class="nav-section-label">Dokumente</span></div>
+      <div class="nav-item" onclick="location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">🎨 Kreativ-Vorlagen</h1>
+        <div style="font-size:13px;color:#6b7280">Canva-Designs hochladen. Platzhalter werden automatisch mit Kundendaten befüllt.</div>
+      </div>
+      <button class="btn btn-primary" onclick="openUploadModal()">+ Vorlage hochladen</button>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Format filter -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-secondary active-filter" onclick="filterFormat('all',this)">Alle</button>
+        <button class="btn btn-sm btn-outline" onclick="filterFormat('post',this)">📸 Post (1:1)</button>
+        <button class="btn btn-sm btn-outline" onclick="filterFormat('story',this)">📱 Story (9:16)</button>
+        <button class="btn btn-sm btn-outline" onclick="filterFormat('banner',this)">🖼️ Banner (1.91:1)</button>
+        <button class="btn btn-sm btn-outline" onclick="filterFormat('square',this)">⬛ Square</button>
+      </div>
+
+      <div id="tplGrid" class="tpl-grid">
+        <div class="text-muted text-sm">Laden...</div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="modalUpload">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-title" id="uploadModalTitle">Neue Kreativ-Vorlage</span>
+      <button class="modal-close" onclick="closeModal('modalUpload')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+           ondrop="handleDrop(event)" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+        <input type="file" id="fileInput" accept="image/*" onchange="previewFile(this)">
+        <div id="uploadPrompt">
+          <div style="font-size:32px;margin-bottom:8px">🖼️</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px">Canva-Design hier ablegen</div>
+          <div style="font-size:12px;color:#9ca3af">PNG, JPG, WebP · max. 10 MB</div>
+        </div>
+        <img id="uploadPreview" class="upload-preview" style="display:none">
+      </div>
+
+      <div style="margin-top:14px">
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Name der Vorlage <span class="required">*</span></label>
+          <input type="text" id="tplName" class="form-control" placeholder="z.B. Immobilien Post – Blau">
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Format</label>
+          <select id="tplFormat" class="form-control">
+            <option value="post">📸 Post (1:1) – Facebook/Instagram Feed</option>
+            <option value="story">📱 Story (9:16) – Instagram/Facebook Story</option>
+            <option value="banner">🖼️ Banner (1.91:1) – Facebook Link-Anzeige</option>
+            <option value="square">⬛ Square – Verschiedene Plattformen</option>
+          </select>
+        </div>
+
+        <!-- Placeholders -->
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Platzhalter im Design</label>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Welche Texte sind im Canva-Design als Platzhalter vorhanden?</div>
+          <div id="placeholderList" style="margin-bottom:8px"></div>
+          <button type="button" class="btn btn-sm btn-outline" onclick="addPlaceholder()">+ Platzhalter hinzufügen</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notizen</label>
+          <input type="text" id="tplNotes" class="form-control" placeholder="z.B. Nur für Immobilienmakler, dunkles Design">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalUpload')">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveTemplate()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Brief Modal -->
+<div class="modal-overlay" id="modalBrief">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <span class="modal-title">📋 Canva-Brief</span>
+      <button class="modal-close" onclick="closeModal('modalBrief')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#6b7280;margin-bottom:14px">Diese Werte in Canva eintragen um die Vorlage zu personalisieren:</p>
+      <div id="briefContent"></div>
+      <button class="btn btn-secondary w-full" style="margin-top:12px" onclick="copyBrief()">📋 Alles kopieren</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999"></div>
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  initNav('creative-templates');
+
+  let allTemplates = [];
+  let currentFormat = 'all';
+  let editingId = null;
+  const PLACEHOLDER_PRESETS = [
+    { key: 'headline', label: 'Überschrift / Headline', source: 'headline' },
+    { key: 'firmen_name', label: 'Firmenname', source: 'firmen_name' },
+    { key: 'telefon', label: 'Telefonnummer', source: 'telefon' },
+    { key: 'stadt', label: 'Stadt / Region', source: 'stadt' },
+    { key: 'cta', label: 'Call-to-Action Button', source: 'cta' },
+    { key: 'hook', label: 'Hook / Einstiegstext', source: 'hook' },
+    { key: 'zielgruppe', label: 'Zielgruppe', source: 'zielgruppe' },
+    { key: 'anzeigentext', label: 'Anzeigentext', source: 'anzeigentext' },
+  ];
+
+  async function loadTemplates() {
+    try {
+      allTemplates = await API.get('/api/admin/creative-templates');
+      renderGrid();
+    } catch(e) { document.getElementById('tplGrid').innerHTML = '<div class="text-muted">Fehler beim Laden</div>'; }
+  }
+
+  function renderGrid() {
+    const list = currentFormat === 'all' ? allTemplates : allTemplates.filter(t => t.format === currentFormat);
+    const grid = document.getElementById('tplGrid');
+    if (!list.length) { grid.innerHTML = '<div class="text-muted text-sm" style="grid-column:1/-1;padding:40px;text-align:center">Noch keine Vorlagen hochgeladen.<br>Lade deine Canva-Designs hoch.</div>'; return; }
+    grid.innerHTML = list.map(t => {
+      const fmtLabel = { post:'Post 1:1', story:'Story 9:16', banner:'Banner', square:'Square' };
+      const fmtColor = { post:'#eff6ff', story:'#fdf4ff', banner:'#fff7ed', square:'#f0fdf4' };
+      return `
+        <div class="tpl-card">
+          <img src="${t.file_path}" class="tpl-img ${t.format}" alt="${t.name}" onerror="this.src='/uploads/placeholder.png'">
+          <div class="tpl-body">
+            <div class="tpl-name">${t.name}</div>
+            <div class="tpl-format" style="background:${fmtColor[t.format]||'#f3f4f6'};display:inline-block;padding:1px 6px;border-radius:4px;margin-bottom:6px">${fmtLabel[t.format]||t.format}</div>
+            <div style="flex-wrap:wrap;display:flex;gap:2px;margin-bottom:8px">
+              ${(t.placeholders||[]).map(p => `<span class="placeholder-tag">{{${p.key}}}</span>`).join('')}
+            </div>
+            <div class="tpl-actions">
+              <button class="btn btn-sm btn-primary" onclick="openBrief(${t.id})" style="flex:1">📋 Brief</button>
+              <button class="btn btn-sm btn-outline" onclick="editTemplate(${t.id})">✏️</button>
+              <button class="btn btn-sm btn-outline" onclick="deleteTemplate(${t.id})" style="color:#dc2626">🗑️</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function filterFormat(fmt, btn) {
+    currentFormat = fmt;
+    document.querySelectorAll('.active-filter').forEach(b => b.classList.remove('active-filter'));
+    btn.classList.add('active-filter');
+    renderGrid();
+  }
+
+  function openUploadModal() {
+    editingId = null;
+    document.getElementById('uploadModalTitle').textContent = 'Neue Kreativ-Vorlage';
+    document.getElementById('tplName').value = '';
+    document.getElementById('tplFormat').value = 'post';
+    document.getElementById('tplNotes').value = '';
+    document.getElementById('placeholderList').innerHTML = '';
+    document.getElementById('uploadPreview').style.display = 'none';
+    document.getElementById('uploadPrompt').style.display = 'block';
+    document.getElementById('fileInput').value = '';
+    openModal('modalUpload');
+  }
+
+  function editTemplate(id) {
+    const t = allTemplates.find(x => x.id === id);
+    if (!t) return;
+    editingId = id;
+    document.getElementById('uploadModalTitle').textContent = 'Vorlage bearbeiten';
+    document.getElementById('tplName').value = t.name;
+    document.getElementById('tplFormat').value = t.format;
+    document.getElementById('tplNotes').value = t.notes || '';
+    document.getElementById('uploadPrompt').style.display = 'none';
+    const prev = document.getElementById('uploadPreview');
+    prev.src = t.file_path; prev.style.display = 'block';
+    document.getElementById('placeholderList').innerHTML = '';
+    (t.placeholders || []).forEach(p => addPlaceholder(p));
+    openModal('modalUpload');
+  }
+
+  function previewFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('uploadPreview');
+      prev.src = e.target.result; prev.style.display = 'block';
+      document.getElementById('uploadPrompt').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+    // Auto-suggest name from filename
+    if (!document.getElementById('tplName').value) {
+      document.getElementById('tplName').value = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('uploadZone').classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) { const dt = new DataTransfer(); dt.items.add(file); document.getElementById('fileInput').files = dt.files; previewFile(document.getElementById('fileInput')); }
+  }
+
+  function addPlaceholder(preset = null) {
+    const list = document.getElementById('placeholderList');
+    const idx = list.children.length;
+    const presetOpts = PLACEHOLDER_PRESETS.map(p => `<option value="${p.key}" data-label="${p.label}" data-source="${p.source}" ${preset?.key === p.key ? 'selected' : ''}>${p.label} ({{${p.key}}})</option>`).join('');
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    div.innerHTML = `
+      <select class="form-control ph-key" style="flex:1" onchange="this.dataset.source=this.options[this.selectedIndex].dataset.source">${presetOpts}<option value="custom">+ Eigener Platzhalter</option></select>
+      <button type="button" class="btn btn-sm btn-outline" style="color:#dc2626;flex-shrink:0" onclick="this.parentElement.remove()">✕</button>`;
+    if (preset) div.querySelector('select').dataset.source = preset.source || preset.key;
+    list.appendChild(div);
+  }
+
+  async function saveTemplate() {
+    const name = document.getElementById('tplName').value.trim();
+    if (!name) { showToast('Name erforderlich', 'error'); return; }
+
+    const placeholders = Array.from(document.querySelectorAll('.ph-key')).map(sel => {
+      const opt = sel.options[sel.selectedIndex];
+      return { key: sel.value, label: opt.dataset.label || opt.text, source: sel.dataset.source || sel.value };
+    });
+
+    if (editingId) {
+      await API.put('/api/admin/creative-templates/' + editingId, {
+        name, format: document.getElementById('tplFormat').value,
+        placeholders: JSON.stringify(placeholders),
+        notes: document.getElementById('tplNotes').value,
+      });
+      showToast('Vorlage aktualisiert');
+    } else {
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) { showToast('Bitte Bild hochladen', 'error'); return; }
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('name', name);
+      fd.append('format', document.getElementById('tplFormat').value);
+      fd.append('placeholders', JSON.stringify(placeholders));
+      fd.append('notes', document.getElementById('tplNotes').value);
+      const tok = localStorage.getItem('authToken');
+      const r = await fetch('/api/admin/creative-templates', { method: 'POST', headers: { Authorization: 'Bearer ' + tok }, body: fd });
+      if (!r.ok) { const e = await r.json(); showToast(e.error || 'Fehler', 'error'); return; }
+      showToast('Vorlage hochgeladen ✓');
+    }
+    closeModal('modalUpload');
+    loadTemplates();
+  }
+
+  async function deleteTemplate(id) {
+    if (!confirm('Vorlage löschen?')) return;
+    await API.delete('/api/admin/creative-templates/' + id);
+    showToast('Gelöscht');
+    loadTemplates();
+  }
+
+  let briefData = null;
+  async function openBrief(id) {
+    try {
+      const res = await API.post('/api/admin/creative-templates/brief', { template_id: id });
+      briefData = res.template;
+      const tpl = res.template;
+      document.getElementById('briefContent').innerHTML = `
+        <div class="brief-card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <img src="${tpl.file_path}" style="width:60px;height:60px;object-fit:cover;border-radius:6px">
+            <div><strong>${tpl.name}</strong><br><span style="font-size:12px;color:#6b7280">${tpl.format}</span></div>
+          </div>
+          ${(tpl.placeholders||[]).map(p => `
+            <div class="brief-field">
+              <span class="brief-key">{{${p.key}}}</span>
+              <span class="brief-val">${p.value || '<span style="color:#9ca3af;font-style:italic">noch nicht befüllt</span>'}</span>
+            </div>`).join('')}
+        </div>`;
+      openModal('modalBrief');
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  function copyBrief() {
+    if (!briefData) return;
+    const lines = (briefData.placeholders || []).map(p => `{{${p.key}}} → ${p.value || '(leer)'}`).join('\n');
+    navigator.clipboard.writeText(briefData.name + '\n\n' + lines).then(() => showToast('Brief kopiert!'));
+  }
+
+  loadTemplates();
+</script>
+</body>
+</html>
