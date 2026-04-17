@@ -3,7 +3,23 @@ const router = express.Router();
 const db = require('../../db');
 const { requireAdmin } = require('../../middleware/auth');
 const ai = require('../../services/ai');
-const { getAllTemplates } = require('../../funnelTemplates');
+const { getAllTemplates, getTemplate } = require('../../funnelTemplates');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+
+const heroStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../../../public/uploads/hero');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, 'hero_' + Date.now() + ext);
+  },
+});
+const uploadHero = multer({ storage: heroStorage, limits: { fileSize: 8 * 1024 * 1024 } });
 
 // POST /api/admin/ai/strategy
 router.post('/strategy', requireAdmin, async (req, res) => {
@@ -235,13 +251,36 @@ router.delete('/creatives/:id', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ── POST /api/admin/ai/auto-campaign-preflight ───────────────────────────────
+// Quick check: does the AI need more info before running full setup?
+router.post('/auto-campaign-preflight', requireAdmin, async (req, res) => {
+  const { company, industry, city, budget, platform, description, target_audience } = req.body;
+  try {
+    const result = await ai.checkCampaignInfo({ company, industry, city, budget, platform, description, targetAudience: target_audience });
+    res.json(result);
+  } catch {
+    res.json({ ready: true }); // always fall through on error
+  }
+});
+
+// ── POST /api/admin/ai/upload-hero ───────────────────────────────────────────
+// Pre-upload hero image, returns URL to include in auto-campaign call
+router.post('/upload-hero', requireAdmin, uploadHero.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Kein Bild hochgeladen' });
+  const url = '/uploads/hero/' + req.file.filename;
+  res.json({ url });
+});
+
+// ── GET /api/admin/ai/standard-qual-questions ─────────────────────────────────
+router.get('/standard-qual-questions', requireAdmin, (req, res) => {
+  res.json(ai.STANDARD_QUAL_QUESTIONS);
+});
+
 // ── POST /api/admin/ai/auto-campaign ─────────────────────────────────────────
 // One-click: create campaign + funnel + creatives + strategy + qual questions
 router.post('/auto-campaign', requireAdmin, async (req, res) => {
-  const { customer_id, campaign_id, name, platform, budget, city, description, target_audience } = req.body;
+  const { customer_id, campaign_id, name, platform, budget, city, description, target_audience, extra_info, hero_image_url, custom_qual_questions } = req.body;
   if (!customer_id) return res.status(400).json({ error: 'customer_id erforderlich' });
-
-  const { getTemplate } = require('../../funnelTemplates');
 
   try {
     const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customer_id);
@@ -261,26 +300,10 @@ router.post('/auto-campaign', requireAdmin, async (req, res) => {
         .run(campName, platform || null, parseFloat(budget) || 0, description || null, target_audience || null, campId);
     }
 
-    // 2. Pick best template
-    const industry = (customer.industry || '').toLowerCase();
-    let templateId = 'makler_v1';
-    if (/solar|photovoltaik|pv|energie/.test(industry)) templateId = 'solar_v1';
-    const customTpl = db.prepare("SELECT template_id FROM custom_templates ORDER BY created_at DESC LIMIT 1").get();
-    if (customTpl) templateId = customTpl.template_id;
-    const tpl = getTemplate(templateId) || getTemplate('makler_v1');
-    if (tpl) templateId = tpl.id || templateId;
+    // 2. Gather all templates so AI can pick the best one
+    const allTemplates = getAllTemplates();
 
-    // 3. Create funnel
-    const funnelName = campName + ' – Landing Page';
-    const fr = db.prepare(`
-      INSERT INTO funnels (customer_id, campaign_id, template_id, name, status, fields, text_slots, image_slots)
-      VALUES (?, ?, ?, ?, 'draft', '{}', '{}', '{}')
-    `).run(customer_id, campId, templateId, funnelName);
-    const funnelId = fr.lastInsertRowid;
-
-    // 4. AI: generate everything in one call
-    const tplDef = getTemplate(templateId);
-    const textSlots = tplDef ? tplDef.text_slots.filter(s => s.ai_generated) : [];
+    // 3. AI: generate everything in one call (template auto-selection included)
     const aiResult = await ai.generateAutoSetup({
       company: customer.company_name,
       industry: customer.industry || '',
@@ -289,10 +312,32 @@ router.post('/auto-campaign', requireAdmin, async (req, res) => {
       platform: platform || 'Meta Ads',
       description: description || '',
       targetAudience: target_audience || '',
-      templateTextSlots: textSlots,
+      extraInfo: extra_info || '',
+      availableTemplates: allTemplates,
+      standardQuestions: custom_qual_questions || null,
     });
 
-    // 5. Fill funnel fields + qual questions + text_slots
+    // 4. Resolve template: AI recommendation → fallback industry detect → makler_v1
+    let templateId = aiResult.recommended_template_id || null;
+    if (!templateId || !getTemplate(templateId)) {
+      const industry = (customer.industry || '').toLowerCase();
+      templateId = /solar|photovoltaik|pv|energie/.test(industry) ? 'solar_v1' : 'makler_v1';
+    }
+    // Update text slots using the resolved template
+    const tplDef = getTemplate(templateId);
+    const textSlots = tplDef ? tplDef.text_slots.filter(s => s.ai_generated) : [];
+
+    // 5. Create funnel with hero image if provided
+    const funnelName = campName + ' – Landing Page';
+    const imageSlots = hero_image_url ? JSON.stringify({ hero_image: hero_image_url }) : '{}';
+    const fr = db.prepare(`
+      INSERT INTO funnels (customer_id, campaign_id, template_id, name, status, fields, text_slots, image_slots)
+      VALUES (?, ?, ?, ?, 'draft', '{}', '{}', ?)
+    `).run(customer_id, campId, templateId, funnelName, imageSlots);
+    const funnelId = fr.lastInsertRowid;
+
+    // 6. Fill funnel fields
+    const finalQualQuestions = aiResult.qualification_questions || [];
     const fields = {
       firmen_name: customer.company_name,
       makler_name: customer.contact_name || customer.company_name,
@@ -302,18 +347,18 @@ router.post('/auto-campaign', requireAdmin, async (req, res) => {
       email: customer.email || '',
       zielgruppe: aiResult.target_audience || target_audience || '',
       usp: aiResult.usp || '',
-      __qual_steps: aiResult.qualification_questions || [],
+      __qual_steps: finalQualQuestions,
     };
     db.prepare(`UPDATE funnels SET fields=?, text_slots=?, updated_at=datetime('now') WHERE id=?`)
       .run(JSON.stringify(fields), JSON.stringify(aiResult.text_slots || {}), funnelId);
 
-    // 6. Save ad creatives
+    // 7. Save ad creatives
     for (const cr of (aiResult.ad_creatives || [])) {
       db.prepare(`INSERT INTO ad_creatives (customer_id, campaign_id, type, title, content, status, source) VALUES (?,?,?,?,?,'draft','ai')`)
         .run(customer_id, campId, cr.type, cr.title, cr.content);
     }
 
-    // 7. Save strategy
+    // 8. Save strategy
     db.prepare(`INSERT INTO ai_analyses (customer_id, campaign_id, type, result, created_by) VALUES (?,?,'strategy',?,'auto-setup')`)
       .run(customer_id, campId, aiResult.strategy);
 
@@ -322,9 +367,10 @@ router.post('/auto-campaign', requireAdmin, async (req, res) => {
       campaign_name: campName,
       funnel_id: funnelId,
       template_id: templateId,
+      template_name: tplDef ? tplDef.name : templateId,
       strategy: aiResult.strategy,
       ad_creatives: aiResult.ad_creatives || [],
-      qualification_questions: aiResult.qualification_questions || [],
+      qualification_questions: finalQualQuestions,
     });
 
   } catch (err) {

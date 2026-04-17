@@ -44,6 +44,22 @@
     @keyframes typing { 0%,100%{opacity:.3;transform:translateY(0)} 50%{opacity:1;transform:translateY(-4px)} }
     .highlight-update { animation: hlFade 1.6s ease; }
     @keyframes hlFade { 0%{outline: 2px solid #facc15;background:#fef9c3} 100%{outline: none;background:transparent} }
+    .upload-zone { border: 2px dashed #d1d5db; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all .2s; background: #fafafa; }
+    .upload-zone:hover, .upload-zone.drag { border-color: #4f46e5; background: #eff6ff; }
+    .upload-zone input[type=file] { display: none; }
+    .upload-preview { position: relative; display: inline-block; margin-top: 10px; }
+    .upload-preview img { max-height: 100px; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .upload-preview .rm-img { position: absolute; top: -6px; right: -6px; background: #ef4444; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; line-height: 20px; text-align: center; }
+    .preflight-panel { background: #fffbeb; border: 1.5px solid #fbbf24; border-radius: 10px; padding: 18px; margin-top: 14px; }
+    .preflight-panel h4 { font-size: 14px; font-weight: 700; margin: 0 0 4px; color: #92400e; }
+    .preflight-panel p { font-size: 12px; color: #78350f; margin: 0 0 12px; }
+    .qual-edit-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    .qual-edit-row .qual-item { flex: 1; margin-bottom: 0; }
+    .qual-edit-row .btn-icon { background: none; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 13px; color: #6b7280; flex-shrink: 0; }
+    .qual-edit-row .btn-icon:hover { background: #f3f4f6; }
+    .qual-inline-edit { background: #fff; border: 1.5px solid #4f46e5; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+    .qual-inline-edit input, .qual-inline-edit textarea { width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 8px; font-size: 12px; margin-bottom: 6px; font-family: inherit; }
+    .tpl-badge { display: inline-flex; align-items: center; gap: 6px; background: #ede9fe; color: #5b21b6; border-radius: 99px; padding: 4px 12px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -127,9 +143,34 @@
               <input type="text" id="campTarget" class="form-control" placeholder="z.B. Hausbesitzer 45+, die verkaufen wollen">
             </div>
 
-            <div class="form-group" style="margin-bottom:20px">
+            <div class="form-group" style="margin-bottom:14px">
               <label class="form-label">Aktuelle Situation &amp; Besonderheiten <span style="color:#6b7280;font-weight:400">(je mehr, desto besser)</span></label>
-              <textarea id="campDesc" class="form-control" rows="5" placeholder="z.B. Makler mit 15 Jahren Erfahrung in München Schwabing. Spezialisiert auf Wohnimmobilien 500k–1,5M€. Hat bereits 200+ Objekte vermittelt. Braucht mehr Eigentümer-Anfragen. Konkurrenz: viele Online-Makler ohne lokale Expertise..."></textarea>
+              <textarea id="campDesc" class="form-control" rows="4" placeholder="z.B. Makler mit 15 Jahren Erfahrung in München Schwabing. Spezialisiert auf Wohnimmobilien 500k–1,5M€. Hat bereits 200+ Objekte vermittelt. Braucht mehr Eigentümer-Anfragen."></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom:20px">
+              <label class="form-label">Hero-Bild für Landing Page <span style="color:#6b7280;font-weight:400">(optional)</span></label>
+              <div class="upload-zone" id="uploadZone" onclick="document.getElementById('heroFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleHeroDrop(event)">
+                <input type="file" id="heroFileInput" accept="image/*" onchange="handleHeroFile(this.files[0])">
+                <div id="uploadPlaceholder">
+                  <div style="font-size:28px;margin-bottom:6px">🖼️</div>
+                  <div style="font-size:13px;color:#6b7280">Bild hierher ziehen oder klicken</div>
+                  <div style="font-size:11px;color:#9ca3af;margin-top:4px">JPG, PNG, WebP – max. 8 MB</div>
+                </div>
+                <div id="uploadPreview" class="upload-preview" style="display:none">
+                  <img id="heroThumb" src="" alt="Vorschau">
+                  <button class="rm-img" onclick="event.stopPropagation();removeHeroImage()">✕</button>
+                </div>
+              </div>
+              <div id="uploadStatus" style="font-size:12px;color:#6b7280;margin-top:4px"></div>
+            </div>
+
+            <!-- Preflight follow-up questions (shown if AI needs more info) -->
+            <div id="preflightPanel" class="preflight-panel" style="display:none">
+              <h4>💡 Noch eine kurze Frage</h4>
+              <p>Die KI benötigt noch ein paar Details für eine bessere Kampagne:</p>
+              <div id="preflightQuestions"></div>
+              <button class="btn btn-primary" style="width:100%" onclick="submitPreflight()">Weiter →</button>
             </div>
 
             <button class="big-btn" id="btnAutoSetup" onclick="runAutoSetup()">
@@ -154,6 +195,12 @@
 
           <!-- Results (hidden until done) -->
           <div id="resultsCard" style="display:none">
+
+            <!-- Template badge -->
+            <div id="tplBadgeWrap" style="margin-bottom:4px;display:none">
+              <span class="tpl-badge" id="tplBadge">🎨 Template: –</span>
+              <a id="tplEditorLink" href="#" style="font-size:12px;color:var(--primary);margin-left:8px">Im Editor öffnen →</a>
+            </div>
 
             <!-- Funnel -->
             <div class="card" style="padding:20px;margin-bottom:16px">
@@ -183,7 +230,13 @@
 
             <!-- Qual Questions -->
             <div class="card" style="padding:20px;margin-bottom:16px">
-              <div style="font-size:14px;font-weight:700;margin-bottom:10px">❓ Vorqualifizierungs-Fragen</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-size:14px;font-weight:700">❓ Vorqualifizierungs-Fragen</div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-sm btn-outline" onclick="addQualQuestion()">+ Frage</button>
+                  <button class="btn btn-sm btn-primary" id="btnSaveQual" onclick="saveQualQuestions()" style="display:none">Speichern</button>
+                </div>
+              </div>
               <div id="qualList"></div>
             </div>
 
@@ -236,6 +289,75 @@
   const urlParams = new URLSearchParams(location.search);
   const customerId = parseInt(urlParams.get('customer_id'));
   let resultData = null;
+  let heroImageUrl = null;
+  let preflightAnswers = {};
+  let preflightKeys = [];
+
+  // ── Hero image upload ──────────────────────────────────────────────────────
+  function handleHeroDrop(e) {
+    e.preventDefault();
+    document.getElementById('uploadZone').classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) handleHeroFile(f);
+  }
+
+  async function handleHeroFile(file) {
+    if (!file) return;
+    const status = document.getElementById('uploadStatus');
+    status.textContent = 'Wird hochgeladen...';
+    const fd = new FormData();
+    fd.append('image', file);
+    try {
+      const r = await fetch('/api/admin/ai/upload-hero', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + API.getToken() },
+        body: fd,
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Upload fehlgeschlagen');
+      heroImageUrl = data.url;
+      document.getElementById('heroThumb').src = heroImageUrl;
+      document.getElementById('uploadPreview').style.display = 'inline-block';
+      document.getElementById('uploadPlaceholder').style.display = 'none';
+      status.textContent = 'Bild hochgeladen ✓';
+    } catch (e) {
+      status.textContent = 'Fehler: ' + e.message;
+    }
+  }
+
+  function removeHeroImage() {
+    heroImageUrl = null;
+    document.getElementById('heroThumb').src = '';
+    document.getElementById('uploadPreview').style.display = 'none';
+    document.getElementById('uploadPlaceholder').style.display = 'block';
+    document.getElementById('uploadStatus').textContent = '';
+    document.getElementById('heroFileInput').value = '';
+  }
+
+  // ── Preflight ─────────────────────────────────────────────────────────────
+  function getFormData() {
+    return {
+      customer_id: customerId,
+      name: document.getElementById('campName').value || null,
+      platform: document.getElementById('campPlatform').value || null,
+      budget: parseFloat(document.getElementById('campBudget').value) || 0,
+      city: document.getElementById('campCity').value || null,
+      target_audience: document.getElementById('campTarget').value || null,
+      description: document.getElementById('campDesc').value || null,
+    };
+  }
+
+  function submitPreflight() {
+    // Collect preflight answers and merge into extra_info
+    const parts = [];
+    preflightKeys.forEach(key => {
+      const el = document.getElementById('pf_' + key);
+      if (el && el.value.trim()) parts.push(el.value.trim());
+    });
+    preflightAnswers.extra_info = parts.join(' | ');
+    document.getElementById('preflightPanel').style.display = 'none';
+    executeAutoSetup();
+  }
 
   async function init() {
     if (!customerId) { location.href = '/admin/customers.html'; return; }
@@ -258,10 +380,47 @@
   async function runAutoSetup() {
     const btn = document.getElementById('btnAutoSetup');
     btn.disabled = true;
+    btn.textContent = '⏳ Analysiere...';
+    document.getElementById('preflightPanel').style.display = 'none';
+    preflightAnswers = {};
+
+    // Preflight check
+    try {
+      const fd = getFormData();
+      const check = await API.post('/api/admin/ai/auto-campaign-preflight', {
+        company: '', // customer name loaded server-side
+        city: fd.city,
+        budget: fd.budget,
+        platform: fd.platform,
+        description: fd.description,
+        target_audience: fd.target_audience,
+      });
+      if (!check.ready && check.questions && check.questions.length) {
+        // Show follow-up questions
+        const panel = document.getElementById('preflightPanel');
+        const container = document.getElementById('preflightQuestions');
+        preflightKeys = check.questions.map(q => q.key);
+        container.innerHTML = check.questions.map(q => `
+          <div class="form-group" style="margin-bottom:10px">
+            <label class="form-label" style="color:#92400e">${escHtml(q.question)}</label>
+            <input type="text" id="pf_${escHtml(q.key)}" class="form-control" placeholder="${escHtml(q.placeholder || '')}">
+          </div>`).join('');
+        panel.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '⚡ Alles automatisch erstellen';
+        return;
+      }
+    } catch { /* preflight failed → proceed */ }
+
+    executeAutoSetup();
+  }
+
+  async function executeAutoSetup() {
+    const btn = document.getElementById('btnAutoSetup');
+    btn.disabled = true;
     btn.textContent = '⏳ KI arbeitet...';
     document.getElementById('resultsCard').style.display = 'none';
 
-    // Reset steps
     for (let i = 1; i <= 5; i++) {
       const el = document.getElementById('s' + i);
       el.classList.remove('done', 'active');
@@ -269,29 +428,25 @@
     }
 
     setStep(1, 'active');
-    // Fake progress while waiting
-    const fakeProgress = setTimeout(() => { setStep(1,'done'); setStep(2,'active'); }, 1500);
-    const fakeProgress2 = setTimeout(() => { setStep(2,'done'); setStep(3,'active'); }, 8000);
+    const fp1 = setTimeout(() => { setStep(1,'done'); setStep(2,'active'); }, 1500);
+    const fp2 = setTimeout(() => { setStep(2,'done'); setStep(3,'active'); }, 8000);
 
     try {
+      const fd = getFormData();
       const res = await API.post('/api/admin/ai/auto-campaign', {
-        customer_id: customerId,
-        name: document.getElementById('campName').value || null,
-        platform: document.getElementById('campPlatform').value || null,
-        budget: parseFloat(document.getElementById('campBudget').value) || 0,
-        city: document.getElementById('campCity').value || null,
-        target_audience: document.getElementById('campTarget').value || null,
-        description: document.getElementById('campDesc').value || null,
+        ...fd,
+        extra_info: preflightAnswers.extra_info || null,
+        hero_image_url: heroImageUrl || null,
       });
 
-      clearTimeout(fakeProgress); clearTimeout(fakeProgress2);
+      clearTimeout(fp1); clearTimeout(fp2);
       setStep(1,'done'); setStep(2,'done'); setStep(3,'done'); setStep(4,'done'); setStep(5,'done');
 
       resultData = res;
       showResults(res);
       showToast('Fertig! Alle Assets wurden erstellt.');
     } catch(e) {
-      clearTimeout(fakeProgress); clearTimeout(fakeProgress2);
+      clearTimeout(fp1); clearTimeout(fp2);
       showToast(e.message, 'error');
     } finally {
       btn.disabled = false;
@@ -312,11 +467,66 @@
   }
 
   function showQualQuestions(questions) {
-    document.getElementById('qualList').innerHTML = (questions || []).map((q, i) => `
-      <div class="qual-item">
-        <div class="qual-q">${i+1}. ${escHtml(q.question)}</div>
-        <div class="qual-opts">${(q.options || []).map(o => `<span class="qual-opt">${escHtml(o)}</span>`).join('')}</div>
+    const list = document.getElementById('qualList');
+    list.innerHTML = (questions || []).map((q, i) => `
+      <div class="qual-edit-row" id="qrow_${i}">
+        <div class="qual-item" style="flex:1;margin-bottom:0">
+          <div class="qual-q">${i+1}. ${escHtml(q.question)}</div>
+          <div class="qual-opts">${(q.options || []).map(o => `<span class="qual-opt">${escHtml(o)}</span>`).join('')}</div>
+        </div>
+        <button class="btn-icon" title="Bearbeiten" onclick="editQualQuestion(${i})">✏️</button>
+        <button class="btn-icon" title="Löschen" onclick="deleteQualQuestion(${i})" style="color:#ef4444">✕</button>
       </div>`).join('');
+    document.getElementById('btnSaveQual').style.display = 'inline-flex';
+  }
+
+  function editQualQuestion(i) {
+    const q = resultData.qualification_questions[i];
+    const row = document.getElementById('qrow_' + i);
+    row.outerHTML = `
+      <div class="qual-inline-edit" id="qedit_${i}">
+        <div style="font-size:11px;font-weight:600;color:#4f46e5;margin-bottom:6px">Frage ${i+1} bearbeiten</div>
+        <input id="qe_q_${i}" value="${escHtml(q.question)}" placeholder="Frage..." style="width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;font-size:12px;margin-bottom:6px;font-family:inherit">
+        <input id="qe_o_${i}" value="${escHtml((q.options||[]).join(' | '))}" placeholder="Optionen mit | getrennt" style="width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;font-size:12px;margin-bottom:8px;font-family:inherit">
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-primary" onclick="saveQualEdit(${i})">OK</button>
+          <button class="btn btn-sm btn-outline" onclick="showQualQuestions(resultData.qualification_questions)">Abbrechen</button>
+        </div>
+      </div>`;
+  }
+
+  function saveQualEdit(i) {
+    const q = document.getElementById('qe_q_' + i).value.trim();
+    const opts = document.getElementById('qe_o_' + i).value.split('|').map(s => s.trim()).filter(Boolean);
+    if (!q) return;
+    resultData.qualification_questions[i] = { question: q, type: 'radio', options: opts };
+    showQualQuestions(resultData.qualification_questions);
+  }
+
+  function deleteQualQuestion(i) {
+    resultData.qualification_questions.splice(i, 1);
+    showQualQuestions(resultData.qualification_questions);
+  }
+
+  function addQualQuestion() {
+    if (!resultData) return;
+    resultData.qualification_questions = resultData.qualification_questions || [];
+    resultData.qualification_questions.push({ question: 'Neue Frage?', type: 'radio', options: ['Ja', 'Nein'] });
+    showQualQuestions(resultData.qualification_questions);
+    editQualQuestion(resultData.qualification_questions.length - 1);
+  }
+
+  async function saveQualQuestions() {
+    if (!resultData?.funnel_id) return showToast('Kein Funnel gefunden', 'error');
+    const btn = document.getElementById('btnSaveQual');
+    btn.disabled = true; btn.textContent = 'Speichern...';
+    try {
+      await API.put('/api/admin/funnels/' + resultData.funnel_id + '/fields', {
+        fields: { __qual_steps: resultData.qualification_questions }
+      });
+      showToast('Fragen gespeichert ✓');
+    } catch(e) { showToast(e.message, 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Speichern'; }
   }
 
   function escHtml(s) {
@@ -329,6 +539,14 @@
     document.getElementById('strategyText').textContent = res.strategy || '';
     showCreatives(res.ad_creatives);
     showQualQuestions(res.qualification_questions);
+
+    // Template badge
+    if (res.template_id) {
+      const badge = document.getElementById('tplBadge');
+      badge.textContent = '🎨 Template: ' + (res.template_name || res.template_id);
+      document.getElementById('tplEditorLink').href = '/admin/funnel-editor.html?funnel_id=' + (res.funnel_id || '');
+      document.getElementById('tplBadgeWrap').style.display = 'block';
+    }
   }
 
   // ── Chat ──────────────────────────────────────────────────────────────────

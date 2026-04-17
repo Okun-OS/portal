@@ -317,6 +317,18 @@ router.post('/', requireAdmin, (req, res) => {
   res.status(201).json({ id: result.lastInsertRowid });
 });
 
+// ── PUT /api/admin/funnels/:id/fields ────────────────────────────────────────
+// Patch/merge specific fields without touching text_slots
+router.put('/:id/fields', requireAdmin, (req, res) => {
+  const funnel = db.prepare('SELECT * FROM funnels WHERE id = ?').get(req.params.id);
+  if (!funnel) return res.status(404).json({ error: 'Funnel nicht gefunden' });
+  const existing = JSON.parse(funnel.fields || '{}');
+  const merged = Object.assign(existing, req.body.fields || {});
+  db.prepare(`UPDATE funnels SET fields = ?, updated_at = datetime('now') WHERE id = ?`)
+    .run(JSON.stringify(merged), funnel.id);
+  res.json({ success: true });
+});
+
 // ── PUT /api/admin/funnels/:id/data ──────────────────────────────────────────
 router.put('/:id/data', requireAdmin, (req, res) => {
   const funnel = db.prepare('SELECT * FROM funnels WHERE id = ?').get(req.params.id);

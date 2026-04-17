@@ -387,14 +387,66 @@ Alle Texte auf Deutsch. Fokus auf Conversion und Eigentümer-Leads.`;
   return JSON.parse(match[0]);
 }
 
+// Standard qualification questions used as a base for auto-setup
+const STANDARD_QUAL_QUESTIONS = [
+  { question: 'Möchten Sie Ihre Immobilie in den nächsten 6 Monaten verkaufen?', type: 'radio', options: ['Ja, aktiv', 'Evtl. in 6–12 Monaten', 'Noch unsicher'] },
+  { question: 'Um welche Art von Immobilie handelt es sich?', type: 'radio', options: ['Haus / Villa', 'Eigentumswohnung', 'Mehrfamilienhaus', 'Grundstück'] },
+  { question: 'Haben Sie bereits eine andere Maklerfirma kontaktiert?', type: 'radio', options: ['Nein', 'Ja, aber unzufrieden', 'Läuft noch ein Auftrag'] },
+  { question: 'In welchem Zustand befindet sich die Immobilie?', type: 'radio', options: ['Sehr gut / Neuwertig', 'Gut gepflegt', 'Renovierungsbedarf'] },
+  { question: 'Wann können wir Sie am besten erreichen?', type: 'radio', options: ['Morgens 9–12 Uhr', 'Nachmittags 12–17 Uhr', 'Abends ab 17 Uhr'] },
+];
+
+// 7b. Preflight: check if campaign info is sufficient, return missing questions
+async function checkCampaignInfo({ company, industry, city, budget, platform, description, targetAudience }) {
+  const system = `Du bist ein Marketing-Experte. Prüfe ob genug Informationen für eine vollständige Kampagne vorliegen.
+Antworte AUSSCHLIESSLICH mit gültigem JSON.`;
+
+  const prompt = `Prüfe ob diese Informationen ausreichen für eine gute Marketing-Kampagne:
+UNTERNEHMEN: ${company || '(leer)'}
+BRANCHE: ${industry || '(leer)'}
+STANDORT: ${city || '(leer)'}
+BUDGET: ${budget ? budget + '€/Monat' : '(leer)'}
+PLATTFORM: ${platform || '(leer)'}
+AKTUELLE SITUATION: ${description || '(leer)'}
+ZIELGRUPPE: ${targetAudience || '(leer)'}
+
+Wenn genug Basisinfos vorhanden sind (Unternehmen + grobe Branche = ausreichend), antworte:
+{"ready": true}
+
+Nur wenn wirklich wichtige Infos fehlen (Unternehmen leer ODER Branche/Standort völlig unklar), frage maximal 2 Dinge:
+{"ready": false, "questions": [{"key": "field_key", "question": "Konkrete Frage?", "placeholder": "z.B. ..."}]}
+
+Sei großzügig – im Zweifel immer ready: true.`;
+
+  try {
+    const text = await generate(system, prompt, 400);
+    const match = text.match(/\{[\s\S]*\}/);
+    return JSON.parse(match ? match[0] : '{"ready":true}');
+  } catch {
+    return { ready: true };
+  }
+}
+
 // 8. Auto-Setup: one AI call generates everything for a campaign
-async function generateAutoSetup({ company, industry, city, budget, platform, description, targetAudience, templateTextSlots }) {
+async function generateAutoSetup({ company, industry, city, budget, platform, description, targetAudience, templateTextSlots, availableTemplates, extraInfo, standardQuestions }) {
   const system = `Du bist ein Performance-Marketing-Experte der vollständige Kampagnen für lokale Unternehmen erstellt.
 Antworte AUSSCHLIESSLICH mit gültigem JSON – kein Text außerhalb des JSON-Blocks.`;
 
   const slotList = (templateTextSlots || []).map(s =>
     `    "${s.key}": "${s.label} (max ${s.max_chars || 100} Zeichen)"`
   ).join(',\n');
+
+  const templateList = (availableTemplates || []).map(t =>
+    `  - "${t.template_id}": ${t.name} (${t.category}) – ${t.description || ''}`
+  ).join('\n');
+
+  const extraSection = extraInfo ? `\nZUSATZ-INFORMATIONEN (vom Admin ergänzt):\n${extraInfo}` : '';
+
+  // Use passed-in standard questions or the default ones
+  const baseQuestions = (standardQuestions && standardQuestions.length)
+    ? standardQuestions
+    : STANDARD_QUAL_QUESTIONS;
+  const questionsHint = JSON.stringify(baseQuestions.slice(0, 5));
 
   const prompt = `Erstelle eine komplette Performance-Marketing-Kampagne auf Deutsch.
 
@@ -404,13 +456,18 @@ STANDORT: ${city || 'Nicht angegeben'}
 BUDGET: ${budget || 0}€/Monat
 PLATTFORM: ${platform || 'Meta/Google'}
 AKTUELLE SITUATION: ${description || 'Nicht angegeben'}
-ZIELGRUPPE: ${targetAudience || 'Nicht angegeben'}
+ZIELGRUPPE: ${targetAudience || 'Nicht angegeben'}${extraSection}
+${templateList ? `\nVERFÜGBARE TEMPLATES:\n${templateList}` : ''}
+
+HINWEIS VORQUALIFIZIERUNGS-FRAGEN: Nutze diese als Basis und passe sie an die Branche an:
+${questionsHint}
 
 Antworte MIT GENAU diesem JSON (alle Felder ausfüllen):
 {
   "strategy": "Strategie-Text 300-400 Wörter – konkrete Empfehlungen für diese Kampagne",
   "usp": "Einzigartiger Vorteil max 80 Zeichen",
   "target_audience": "Zielgruppe präzise max 100 Zeichen",
+  "recommended_template_id": "${availableTemplates && availableTemplates.length ? availableTemplates[0].template_id : 'makler_v1'}",
   "text_slots": {
 ${slotList || '    "headline": "Hauptüberschrift"'}
   },
@@ -423,13 +480,15 @@ ${slotList || '    "headline": "Hauptüberschrift"'}
     {"type": "cta", "title": "Call to Action", "content": "Button-Text max 25 Zeichen"}
   ],
   "qualification_questions": [
-    {"question": "Vorqualifizierungsfrage 1", "type": "radio", "options": ["Option A", "Option B", "Option C"]},
-    {"question": "Vorqualifizierungsfrage 2", "type": "radio", "options": ["Ja", "Nein"]},
-    {"question": "Vorqualifizierungsfrage 3", "type": "radio", "options": ["Option A", "Option B", "Option C"]},
-    {"question": "Vorqualifizierungsfrage 4", "type": "radio", "options": ["Option A", "Option B"]},
-    {"question": "Vorqualifizierungsfrage 5", "type": "radio", "options": ["Ja", "Nein", "Unsicher"]}
+    {"question": "Branchenspezifische Frage 1", "type": "radio", "options": ["Option A", "Option B", "Option C"]},
+    {"question": "Branchenspezifische Frage 2", "type": "radio", "options": ["Ja", "Nein"]},
+    {"question": "Branchenspezifische Frage 3", "type": "radio", "options": ["Option A", "Option B", "Option C"]},
+    {"question": "Branchenspezifische Frage 4", "type": "radio", "options": ["Option A", "Option B"]},
+    {"question": "Branchenspezifische Frage 5", "type": "radio", "options": ["Ja", "Nein", "Unsicher"]}
   ]
-}`;
+}
+
+Bei recommended_template_id: Wähle das passendste Template aus der Liste basierend auf der Branche.`;
 
   const text = await generate(system, prompt, 4096);
   const match = text.match(/\{[\s\S]*\}/);
@@ -494,4 +553,4 @@ Qual-Fragen Format: {"question":"...","type":"radio","options":["...","..."]}`;
   }
 }
 
-module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient, generateCampaignPlan, generateAutoSetup, chatWithCampaign };
+module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient, generateCampaignPlan, generateAutoSetup, chatWithCampaign, checkCampaignInfo, STANDARD_QUAL_QUESTIONS };
