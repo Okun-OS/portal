@@ -61,13 +61,20 @@ app.use('/api/client/documents', require('./routes/client/documents'));
 app.use('/api/client/settings', require('./routes/client/settings'));
 app.use('/api/client/explain', require('./routes/client/explain'));
 
+// Config endpoint for frontend (exposes only safe public config)
+app.get('/api/admin/config', requireAdmin, (req, res) => {
+  res.json({
+    mapsKey: process.env.GOOGLE_MAPS_KEY || ''
+  });
+});
+
 // SPA fallback – serve index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n🚀 Lead Management Portal läuft auf http://localhost:${PORT}`);
   console.log(`   Admin:  ${process.env.ADMIN_EMAIL || 'admin@leadportal.com'}`);
   console.log(`   Pass:   ${process.env.ADMIN_PASSWORD || 'Admin123!'}\n`);
@@ -96,3 +103,6 @@ app.listen(PORT, () => {
   setTimeout(autoSync, 30 * 1000);
   setInterval(autoSync, 3 * 60 * 60 * 1000);
 });
+
+// 120s socket timeout – AI calls can take up to 90s, this gives a clean buffer
+server.setTimeout(120000);

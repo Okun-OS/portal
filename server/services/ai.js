@@ -4,7 +4,7 @@ const googleResearch = require('./googleResearch');
 function getClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY nicht konfiguriert. Bitte in der .env-Datei eintragen.');
-  return new Anthropic({ apiKey });
+  return new Anthropic({ apiKey, timeout: 90000 }); // 90s – fails before Express kills the socket
 }
 
 const MODEL = 'claude-sonnet-4-6';

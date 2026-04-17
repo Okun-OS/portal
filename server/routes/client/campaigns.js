@@ -17,11 +17,18 @@ router.get('/', requireClient, (req, res) => {
     ORDER BY created_at DESC
   `).all(customerId);
 
-  // Calculate cost per lead for each campaign
-  const result = campaigns.map(c => ({
-    ...c,
-    cost_per_lead: c.lead_count > 0 ? (c.budget_monthly / c.lead_count).toFixed(2) : null
-  }));
+  const result = campaigns.map(c => {
+    const funnels = db.prepare(`
+      SELECT id, name, slug, status, published_at
+      FROM funnels WHERE customer_id = ? AND (campaign_id = ? OR campaign_id IS NULL)
+      ORDER BY status DESC, created_at DESC
+    `).all(customerId, c.id);
+    return {
+      ...c,
+      cost_per_lead: c.lead_count > 0 ? (c.budget_monthly / c.lead_count).toFixed(2) : null,
+      funnels
+    };
+  });
 
   res.json(result);
 });

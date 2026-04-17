@@ -241,6 +241,11 @@ const migrations = [
   'ALTER TABLE campaigns ADD COLUMN google_campaign_id TEXT',
   'ALTER TABLE leads ADD COLUMN funnel_id INTEGER REFERENCES funnels(id) ON DELETE SET NULL',
   'ALTER TABLE leads ADD COLUMN funnel_slug TEXT',
+  // Campaign Wizard fields
+  'ALTER TABLE campaigns ADD COLUMN geo_targeting TEXT DEFAULT \'{}\'',
+  'ALTER TABLE campaigns ADD COLUMN wizard_step INTEGER DEFAULT 1',
+  'ALTER TABLE campaigns ADD COLUMN ai_plan TEXT DEFAULT \'{}\'',
+  // Separate geo columns (kept for backwards compat)
   'ALTER TABLE campaigns ADD COLUMN geo_lat REAL',
   'ALTER TABLE campaigns ADD COLUMN geo_lng REAL',
   'ALTER TABLE campaigns ADD COLUMN geo_radius_km INTEGER DEFAULT 25',
