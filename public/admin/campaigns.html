@@ -35,8 +35,8 @@
 
   <main class="main-content">
     <div class="page-header">
-      <h1 class="page-title">Kampagnen</h1>
-      <button class="btn btn-primary" onclick="openNewCampaign()">&#43; Neue Kampagne</button>
+      <h1 class="page-title">Kampagnen-Übersicht</h1>
+      <button class="btn btn-primary" onclick="location.href='/admin/customers.html'">&#43; Neue Kampagne</button>
     </div>
     <div class="page-body">
       <div class="card mb-4">
@@ -57,77 +57,6 @@
   </main>
 </div>
 
-<!-- Campaign Modal -->
-<div class="modal-overlay" id="modalCampaign">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="campaignModalTitle">Neue Kampagne</span>
-      <button class="modal-close" onclick="closeModal('modalCampaign')">&times;</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="campaignId">
-      <div class="form-group">
-        <label class="form-label">Kunde <span class="required">*</span></label>
-        <select id="cCustomer" class="form-control"><option value="">-- Kunde wählen --</option></select>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Kampagnenname <span class="required">*</span></label>
-          <input type="text" id="cName" class="form-control" placeholder="Facebook Lead Ads Q1">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Plattform</label>
-          <select id="cPlatform" class="form-control">
-            <option value="">-- Auswählen --</option>
-            <option value="Facebook">Facebook / Instagram</option>
-            <option value="Google">Google Ads</option>
-            <option value="TikTok">TikTok</option>
-            <option value="LinkedIn">LinkedIn</option>
-            <option value="Sonstiges">Sonstiges</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Monatliches Budget (€)</label>
-          <input type="number" id="cBudget" class="form-control" placeholder="1000" min="0" step="10">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Status</label>
-          <select id="cStatus" class="form-control">
-            <option value="active">Aktiv</option>
-            <option value="paused">Pausiert</option>
-            <option value="ended">Beendet</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Startdatum</label>
-          <input type="date" id="cStart" class="form-control">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Enddatum</label>
-          <input type="date" id="cEnd" class="form-control">
-        </div>
-        <div class="form-group col-span-2">
-          <label class="form-label">Beschreibung</label>
-          <textarea id="cDesc" class="form-control" rows="3"></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Google Ads Campaign ID</label>
-          <input type="text" id="cGoogleId" class="form-control" placeholder="z.B. 12345678">
-          <div class="form-hint">Kampagnen-ID aus Google Ads (Kampagnen-Einstellungen)</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Meta Campaign ID</label>
-          <input type="text" id="cMetaId" class="form-control" placeholder="z.B. 120200123456789">
-          <div class="form-hint">Kampagnen-ID aus Meta Ads Manager</div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modalCampaign')">Abbrechen</button>
-      <button class="btn btn-primary" onclick="saveCampaign()">Speichern</button>
-    </div>
-  </div>
-</div>
 
 <div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
 <style>.toast-success{background:#16a34a}.toast-error{background:#dc2626}</style>
@@ -178,7 +107,6 @@
             </div>
             <div style="display:flex;align-items:center;gap:8px">
               ${statusBadge(c.status)}
-              <button class="btn btn-sm btn-secondary" onclick="editCampaign(${c.id})">&#9998;</button>
               <button class="btn btn-sm btn-danger" onclick="deleteCampaign(${c.id},'${c.name}')">&#215;</button>
             </div>
           </div>
@@ -192,64 +120,15 @@
             ${c.platform ? `<div class="text-sm text-muted">Plattform: ${c.platform}</div>` : ''}
             ${c.start_date ? `<div class="text-sm text-muted">Start: ${formatDate(c.start_date)}</div>` : ''}
             ${c.description ? `<div class="text-sm" style="margin-top:8px;color:var(--gray-600)">${c.description}</div>` : ''}
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6">
+              <button class="btn btn-primary btn-sm" style="width:100%" onclick="location.href='/admin/campaign-wizard.html?campaign_id=${c.id}&customer_id=${c.customer_id}'">🧙 Wizard öffnen</button>
+            </div>
           </div>
         </div>
       `;
     }).join('');
   }
 
-  function openNewCampaign() {
-    document.getElementById('campaignModalTitle').textContent = 'Neue Kampagne';
-    document.getElementById('campaignId').value = '';
-    ['cName','cDesc','cStart','cEnd','cGoogleId','cMetaId'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('cCustomer').value = '';
-    document.getElementById('cPlatform').value = '';
-    document.getElementById('cStatus').value = 'active';
-    document.getElementById('cBudget').value = '';
-    openModal('modalCampaign');
-  }
-
-  async function editCampaign(id) {
-    try {
-      const c = await API.get('/api/admin/campaigns/' + id);
-      document.getElementById('campaignModalTitle').textContent = 'Kampagne bearbeiten';
-      document.getElementById('campaignId').value = c.id;
-      document.getElementById('cCustomer').value = c.customer_id;
-      document.getElementById('cName').value = c.name;
-      document.getElementById('cPlatform').value = c.platform || '';
-      document.getElementById('cBudget').value = c.budget_monthly;
-      document.getElementById('cStatus').value = c.status;
-      document.getElementById('cStart').value = c.start_date || '';
-      document.getElementById('cEnd').value = c.end_date || '';
-      document.getElementById('cDesc').value = c.description || '';
-      document.getElementById('cGoogleId').value = c.google_campaign_id || '';
-      document.getElementById('cMetaId').value = c.meta_campaign_id || '';
-      openModal('modalCampaign');
-    } catch(e) { showToast(e.message,'error'); }
-  }
-
-  async function saveCampaign() {
-    const id = document.getElementById('campaignId').value;
-    const body = {
-      customer_id: document.getElementById('cCustomer').value,
-      name: document.getElementById('cName').value,
-      platform: document.getElementById('cPlatform').value,
-      budget_monthly: parseFloat(document.getElementById('cBudget').value) || 0,
-      status: document.getElementById('cStatus').value,
-      start_date: document.getElementById('cStart').value || null,
-      end_date: document.getElementById('cEnd').value || null,
-      description: document.getElementById('cDesc').value,
-      google_campaign_id: document.getElementById('cGoogleId').value || null,
-      meta_campaign_id: document.getElementById('cMetaId').value || null,
-    };
-    try {
-      if (id) await API.put('/api/admin/campaigns/' + id, body);
-      else await API.post('/api/admin/campaigns', body);
-      closeModal('modalCampaign');
-      showToast(id ? 'Kampagne aktualisiert' : 'Kampagne erstellt');
-      loadCampaigns();
-    } catch(e) { showToast(e.message,'error'); }
-  }
 
   async function deleteCampaign(id, name) {
     if (!confirm(`Kampagne "${name}" löschen?`)) return;
