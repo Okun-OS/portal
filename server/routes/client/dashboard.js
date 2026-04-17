@@ -5,7 +5,11 @@ const { requireClient } = require('../../middleware/auth');
 
 // GET /api/client/dashboard
 router.get('/', requireClient, (req, res) => {
-  const customerId = req.user.customerId;
+  let customerId = req.user.customerId;
+  if (!customerId && req.user.id) {
+    const customer = db.prepare('SELECT id FROM customers WHERE user_id = ?').get(req.user.id);
+    customerId = customer ? customer.id : null;
+  }
   if (!customerId) return res.status(403).json({ error: 'Kein Kundenkonto verknüpft' });
 
   const now = new Date();

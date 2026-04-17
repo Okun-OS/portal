@@ -6,7 +6,11 @@ const ai = require('../../services/ai');
 
 // POST /api/client/explain – generate friendly explanation of own stats
 router.post('/', requireClient, async (req, res) => {
-  const customerId = req.user.customerId;
+  let customerId = req.user.customerId;
+  if (!customerId && req.user.id) {
+    const customer = db.prepare('SELECT id FROM customers WHERE user_id = ?').get(req.user.id);
+    customerId = customer ? customer.id : null;
+  }
   if (!customerId) return res.status(403).json({ error: 'Kein Kundenkonto verknüpft' });
 
   try {

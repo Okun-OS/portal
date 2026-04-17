@@ -5,7 +5,12 @@ const { requireClient } = require('../../middleware/auth');
 
 // GET /api/client/campaigns
 router.get('/', requireClient, (req, res) => {
-  const customerId = req.user.customerId;
+  let customerId = req.user.customerId;
+  // Fallback: look up by user_id in case JWT is missing customerId
+  if (!customerId && req.user.id) {
+    const customer = db.prepare('SELECT id FROM customers WHERE user_id = ?').get(req.user.id);
+    customerId = customer ? customer.id : null;
+  }
   if (!customerId) return res.status(403).json({ error: 'Kein Kundenkonto verknüpft' });
 
   const campaigns = db.prepare(`

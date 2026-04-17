@@ -81,9 +81,9 @@
   };
 
   async function loadCampaigns() {
+    const container = document.getElementById('campaignContent');
     try {
       const campaigns = await API.get('/api/client/campaigns');
-      const container = document.getElementById('campaignContent');
 
       if (!campaigns.length) {
         container.innerHTML = `
@@ -97,7 +97,15 @@
 
       container.innerHTML = campaigns.map(c => renderCampaign(c)).join('');
 
-    } catch(e) { showToast(e.message, 'error'); }
+    } catch(e) {
+      container.innerHTML = `
+        <div style="padding:40px;text-align:center;color:#6b7280">
+          <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+          <div style="font-weight:600;margin-bottom:6px">Kampagnen konnten nicht geladen werden</div>
+          <div style="font-size:13px">${e.message || 'Bitte Seite neu laden oder Support kontaktieren.'}</div>
+          <button class="btn btn-secondary" style="margin-top:16px" onclick="location.reload()">Neu laden</button>
+        </div>`;
+    }
   }
 
   function renderCampaign(c) {
