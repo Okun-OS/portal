@@ -100,7 +100,7 @@
 
         <!-- Right column -->
         <div>
-          <!-- Campaign status card -->
+          <!-- Campaign status cards -->
           <div id="campaignStatusCard" style="margin-bottom:16px">
             <div class="loading-overlay">Laden...</div>
           </div>
@@ -184,36 +184,30 @@
         `).join('');
       }
 
-      // Campaign status
-      const c = data.activeCampaign;
+      // Campaign status – show ALL campaigns
       const cardEl = document.getElementById('campaignStatusCard');
-      if (c) {
-        const msgMap = {
-          active: { msg: 'Ihre Kampagne läuft aktiv und generiert neue Anfragen.', cls: 'active', icon: '&#128994;' },
-          paused: { msg: 'Ihre Kampagne ist aktuell pausiert. Sprechen Sie uns an.', cls: 'paused', icon: '&#128993;' },
-          ended:  { msg: 'Diese Kampagne wurde abgeschlossen.', cls: 'paused', icon: '&#9898;' }
-        };
-        const info = msgMap[c.status] || msgMap.active;
-        cardEl.innerHTML = `
-          <div class="campaign-status-card ${info.cls}">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-              <span style="font-size:20px">${info.icon}</span>
-              <span class="cs-title">${c.name}</span>
+      try {
+        const campaigns = await API.get('/api/client/campaigns');
+        if (!campaigns.length) {
+          cardEl.innerHTML = `<div class="campaign-status-card paused"><div class="cs-title">&#9898; Keine Kampagne</div><div class="cs-message">Es läuft noch keine Kampagne. Bitte sprechen Sie uns an.</div></div>`;
+        } else {
+          const icons = { active: '&#128994;', paused: '&#128993;', ended: '&#9898;' };
+          const cls   = { active: 'active',    paused: 'paused',    ended: 'paused'   };
+          cardEl.innerHTML = campaigns.map(c => `
+            <div class="campaign-status-card ${cls[c.status] || 'paused'}" style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                <span style="font-size:18px">${icons[c.status] || '&#9898;'}</span>
+                <strong style="font-size:14px">${c.name}</strong>
+              </div>
+              <div style="font-size:12px;display:flex;gap:12px;flex-wrap:wrap;color:rgba(0,0,0,0.6)">
+                ${c.platform ? `<span>&#128247; ${c.platform}</span>` : ''}
+                <span>&#127919; ${c.lead_count} Leads</span>
+                ${c.funnels && c.funnels.filter(f=>f.status==='published').length ? `<span>&#127760; ${c.funnels.filter(f=>f.status==='published').length} Landing Page(s)</span>` : ''}
+              </div>
             </div>
-            <div class="cs-message">${info.msg}</div>
-            <div style="margin-top:12px">
-              <a href="/client/campaigns.html" style="font-size:13px;color:var(--primary);font-weight:500">Details ansehen →</a>
-            </div>
-          </div>
-        `;
-      } else {
-        cardEl.innerHTML = `
-          <div class="campaign-status-card paused">
-            <div class="cs-title">&#9898; Keine aktive Kampagne</div>
-            <div class="cs-message">Aktuell läuft keine Kampagne. Bitte sprechen Sie uns an.</div>
-          </div>
-        `;
-      }
+          `).join('') + `<a href="/client/campaigns.html" style="font-size:13px;color:var(--primary);font-weight:500">Alle Details ansehen →</a>`;
+        }
+      } catch { cardEl.innerHTML = ''; }
 
     } catch(e) { showToast(e.message, 'error'); }
   }
@@ -232,7 +226,7 @@
       const res = await API.post('/api/client/explain', {});
       resultEl.innerHTML = `<div class="ai-explain-box">&#129504; ${res.explanation}</div>`;
     } catch(e) {
-      resultEl.innerHTML = `<div class="alert alert-warning" style="margin-top:12px">&#128274; KI-Funktion nicht verfügbar. Bitte ANTHROPIC_API_KEY in der .env konfigurieren.</div>`;
+      resultEl.innerHTML = `<div class="alert alert-warning" style="margin-top:12px">&#9888; ${e.message}</div>`;
     } finally {
       btn.disabled = false;
       btn.textContent = 'Ergebnisse erklären lassen';

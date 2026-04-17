@@ -138,12 +138,33 @@
 
             <!-- Dates info if available -->
             ${c.start_date ? `
-              <div class="card" style="padding:16px">
-                <div style="display:flex;gap:24px;font-size:13px">
+              <div class="card" style="padding:16px;margin-bottom:20px">
+                <div style="display:flex;gap:24px;font-size:13px;flex-wrap:wrap">
                   <div><span style="color:var(--gray-500)">Kampagnenstart: </span><strong>${formatDate(c.start_date)}</strong></div>
                   ${c.end_date ? `<div><span style="color:var(--gray-500)">Geplantes Ende: </span><strong>${formatDate(c.end_date)}</strong></div>` : ''}
                   ${c.platform ? `<div><span style="color:var(--gray-500)">Plattform: </span><strong>${c.platform}</strong></div>` : ''}
                 </div>
+              </div>
+            ` : ''}
+
+            <!-- Landing Pages -->
+            ${(c.funnels && c.funnels.length) ? `
+              <div class="card" style="padding:20px;margin-bottom:20px">
+                <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:12px">&#127760; Ihre Landing Page(s)</div>
+                ${c.funnels.map(f => `
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6">
+                    <div>
+                      <div style="font-weight:600;font-size:14px">${f.name}</div>
+                      <div style="font-size:12px;color:var(--gray-400);margin-top:2px">
+                        ${f.status === 'published' ? '&#128994; Veröffentlicht' : '&#9898; Entwurf'}
+                        ${f.published_at ? ' &middot; seit ' + formatDate(f.published_at) : ''}
+                      </div>
+                    </div>
+                    ${f.status === 'published' && f.slug ? `
+                      <a href="/f/${f.slug}/" target="_blank" class="btn btn-sm btn-primary">&#127760; Seite öffnen</a>
+                    ` : '<span style="font-size:12px;color:var(--gray-400)">Noch nicht veröffentlicht</span>'}
+                  </div>
+                `).join('')}
               </div>
             ` : ''}
 
