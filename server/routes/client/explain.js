@@ -45,7 +45,8 @@ router.post('/', requireClient, async (req, res) => {
 
     res.json({ explanation });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[explain]', err.message);
+    res.status(500).json({ error: 'KI-Analyse vorübergehend nicht verfügbar. Bitte versuche es in wenigen Minuten erneut.' });
   }
 });
 

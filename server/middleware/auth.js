@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const db = require('../db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
@@ -30,6 +31,11 @@ function requireClient(req, res, next) {
   authenticate(req, res, () => {
     if (req.user.role !== 'client' && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Zugriff verweigert' });
+    }
+    // Refresh customerId from DB in case old token doesn't have it
+    if (req.user.role === 'client' && !req.user.customerId) {
+      const customer = db.prepare('SELECT id FROM customers WHERE user_id = ?').get(req.user.id);
+      req.user.customerId = customer ? customer.id : null;
     }
     next();
   });

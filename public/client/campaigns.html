@@ -5,6 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mein Portal – Meine Kampagne</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .camp-hero { background: linear-gradient(135deg, var(--primary) 0%, #6366f1 100%); color: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+    .camp-hero-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .camp-hero-sub { font-size: 13px; opacity: 0.85; }
+    .camp-status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+    .pill-active { background: rgba(255,255,255,0.25); color: #fff; }
+    .pill-paused { background: rgba(0,0,0,0.1); color: rgba(255,255,255,0.8); }
+    .camp-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .camp-detail-item { background: #f9fafb; border-radius: 8px; padding: 14px 16px; }
+    .camp-detail-label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .camp-detail-value { font-size: 22px; font-weight: 800; color: #111827; }
+    .camp-detail-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .landing-page-card { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border: 1.5px solid #e5e7eb; border-radius: 10px; margin-bottom: 10px; transition: border-color .2s; }
+    .landing-page-card:hover { border-color: var(--primary); }
+    .lp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .lp-dot-live { background: #16a34a; }
+    .lp-dot-draft { background: #9ca3af; }
+    .info-row { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: #4b5563; margin-bottom: 12px; }
+    .info-row span { display: flex; align-items: center; gap: 5px; }
+    .progress-bar-wrap { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin: 6px 0; }
+    .progress-bar-fill { height: 100%; border-radius: 4px; background: var(--success); transition: width .5s; }
+    .camp-section-title { font-size: 13px; font-weight: 700; color: #374151; margin: 20px 0 10px; }
+    .no-camp-state { text-align: center; padding: 60px 24px; }
+    .no-camp-icon { font-size: 48px; margin-bottom: 12px; }
+  </style>
 </head>
 <body>
 <div class="app-layout">
@@ -32,6 +57,7 @@
   <main class="main-content">
     <div class="page-header">
       <h1 class="page-title">Meine Kampagne</h1>
+      <span class="text-muted text-sm" id="lastUpdated"></span>
     </div>
     <div class="page-body" id="campaignContent">
       <div class="loading-overlay">Laden...</div>
@@ -46,29 +72,12 @@
   requireAuth('client');
   initNav('campaigns');
 
-  // Friendly status messages – no marketing jargon
-  const statusMessages = {
-    active: {
-      title: 'Ihre Werbung läuft aktiv',
-      message: 'Wir schalten aktuell Werbung für Ihr Unternehmen und generieren neue Anfragen. Alles läuft nach Plan.',
-      icon: '&#128994;',
-      cls: 'active',
-      detail: 'Sobald eine neue Anfrage eingeht, wird diese automatisch in Ihrer Lead-Liste eingetragen.'
-    },
-    paused: {
-      title: 'Kampagne ist pausiert',
-      message: 'Ihre Werbung ist momentan ausgesetzt. Mögliche Gründe: Budgetanpassung, saisonale Pause oder Optimierung.',
-      icon: '&#128993;',
-      cls: 'paused',
-      detail: 'Bei Fragen wenden Sie sich gerne an uns. Wir schalten die Kampagne schnell wieder aktiv.'
-    },
-    ended: {
-      title: 'Diese Kampagne wurde abgeschlossen',
-      message: 'Die Kampagne ist beendet. Die generierten Leads sind weiterhin in Ihrer Liste sichtbar.',
-      icon: '&#9898;',
-      cls: 'paused',
-      detail: 'Sprechen Sie uns an, wenn Sie eine neue Kampagne starten möchten.'
-    }
+  document.getElementById('lastUpdated').textContent = 'Stand: ' + new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const statusConfig = {
+    active: { label: 'Aktiv – Werbung läuft', icon: '🟢', pillCls: 'pill-active', heroBg: 'linear-gradient(135deg,#4f46e5 0%,#6366f1 100%)', message: 'Ihre Werbung ist aktiv. Wir generieren aktuell neue Anfragen für Ihr Unternehmen.', detail: 'Neue Leads werden automatisch in Ihre Liste eingetragen und Sie werden informiert.' },
+    paused: { label: 'Kampagne pausiert', icon: '🟡', pillCls: 'pill-paused', heroBg: 'linear-gradient(135deg,#d97706 0%,#f59e0b 100%)', message: 'Ihre Werbung ist momentan pausiert.', detail: 'Mögliche Gründe: Budgetanpassung, Optimierung oder saisonale Pause. Bei Fragen sprechen Sie uns an.' },
+    ended: { label: 'Kampagne beendet', icon: '⚪', pillCls: 'pill-paused', heroBg: 'linear-gradient(135deg,#6b7280 0%,#9ca3af 100%)', message: 'Diese Kampagne wurde abgeschlossen.', detail: 'Die generierten Leads sind weiterhin in Ihrer Liste sichtbar. Sprechen Sie uns für eine neue Kampagne an.' },
   };
 
   async function loadCampaigns() {
@@ -78,101 +87,103 @@
 
       if (!campaigns.length) {
         container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">&#128202;</div>
-            <h3>Noch keine Kampagne</h3>
-            <p>Es wurde noch keine Kampagne für Ihr Konto eingerichtet.<br>Bitte sprechen Sie uns an.</p>
+          <div class="no-camp-state">
+            <div class="no-camp-icon">📊</div>
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Noch keine Kampagne eingerichtet</h3>
+            <p style="color:#6b7280;font-size:14px">Es wurde noch keine Kampagne für Ihr Konto angelegt.<br>Bitte sprechen Sie uns an – wir starten sofort.</p>
           </div>`;
         return;
       }
 
-      container.innerHTML = campaigns.map(c => {
-        const info = statusMessages[c.status] || statusMessages.active;
-        const successRate = c.lead_count > 0 ? Math.round((c.closed_leads / c.lead_count) * 100) : 0;
-
-        return `
-          <div style="max-width:680px;margin-bottom:24px">
-
-            <!-- Status card -->
-            <div class="campaign-status-card ${info.cls}" style="margin-bottom:20px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                <span style="font-size:24px">${info.icon}</span>
-                <div>
-                  <div class="cs-title">${info.title}</div>
-                  <div style="font-size:12px;font-weight:500;color:var(--gray-500);margin-top:2px">${c.name}</div>
-                </div>
-              </div>
-              <div class="cs-message">${info.message}</div>
-              <div style="font-size:13px;color:var(--gray-500);margin-top:8px">${info.detail}</div>
-            </div>
-
-            <!-- Simple stats – no CTR/CPC/CPL -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
-              <div class="card" style="padding:20px">
-                <div style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Anfragen gesamt</div>
-                <div style="font-size:36px;font-weight:800;color:var(--gray-900)">${c.lead_count}</div>
-                <div style="font-size:12px;color:var(--gray-400);margin-top:4px">Alle Anfragen seit Start</div>
-              </div>
-              <div class="card" style="padding:20px">
-                <div style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Erfolgreich abgeschlossen</div>
-                <div style="font-size:36px;font-weight:800;color:var(--success)">${c.closed_leads}</div>
-                <div style="font-size:12px;color:var(--gray-400);margin-top:4px">Von Ihnen als abgeschlossen markiert</div>
-              </div>
-            </div>
-
-            ${c.lead_count > 0 ? `
-              <!-- Progress without jargon -->
-              <div class="card" style="padding:20px;margin-bottom:20px">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                  <span style="font-size:13px;font-weight:600;color:var(--gray-700)">Ihre Abschluss-Quote</span>
-                  <span style="font-size:18px;font-weight:700;color:var(--success)">${successRate}%</span>
-                </div>
-                <div style="height:10px;background:var(--gray-100);border-radius:5px;overflow:hidden">
-                  <div style="height:100%;background:var(--success);border-radius:5px;width:${successRate}%;transition:width 0.5s"></div>
-                </div>
-                <div style="font-size:12px;color:var(--gray-400);margin-top:6px">
-                  ${c.closed_leads} von ${c.lead_count} Anfragen erfolgreich abgeschlossen
-                </div>
-              </div>
-            ` : ''}
-
-            <!-- Dates info if available -->
-            ${c.start_date ? `
-              <div class="card" style="padding:16px;margin-bottom:20px">
-                <div style="display:flex;gap:24px;font-size:13px;flex-wrap:wrap">
-                  <div><span style="color:var(--gray-500)">Kampagnenstart: </span><strong>${formatDate(c.start_date)}</strong></div>
-                  ${c.end_date ? `<div><span style="color:var(--gray-500)">Geplantes Ende: </span><strong>${formatDate(c.end_date)}</strong></div>` : ''}
-                  ${c.platform ? `<div><span style="color:var(--gray-500)">Plattform: </span><strong>${c.platform}</strong></div>` : ''}
-                </div>
-              </div>
-            ` : ''}
-
-            <!-- Landing Pages -->
-            ${(c.funnels && c.funnels.length) ? `
-              <div class="card" style="padding:20px;margin-bottom:20px">
-                <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:12px">&#127760; Ihre Landing Page(s)</div>
-                ${c.funnels.map(f => `
-                  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6">
-                    <div>
-                      <div style="font-weight:600;font-size:14px">${f.name}</div>
-                      <div style="font-size:12px;color:var(--gray-400);margin-top:2px">
-                        ${f.status === 'published' ? '&#128994; Veröffentlicht' : '&#9898; Entwurf'}
-                        ${f.published_at ? ' &middot; seit ' + formatDate(f.published_at) : ''}
-                      </div>
-                    </div>
-                    ${f.status === 'published' && f.slug ? `
-                      <a href="/f/${f.slug}/" target="_blank" class="btn btn-sm btn-primary">&#127760; Seite öffnen</a>
-                    ` : '<span style="font-size:12px;color:var(--gray-400)">Noch nicht veröffentlicht</span>'}
-                  </div>
-                `).join('')}
-              </div>
-            ` : ''}
-
-          </div>
-        `;
-      }).join('');
+      container.innerHTML = campaigns.map(c => renderCampaign(c)).join('');
 
     } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  function renderCampaign(c) {
+    const cfg = statusConfig[c.status] || statusConfig.active;
+    const successRate = c.lead_count > 0 ? Math.round((c.closed_leads / c.lead_count) * 100) : 0;
+    const publishedFunnels = (c.funnels || []).filter(f => f.status === 'published' && f.slug);
+    const draftFunnels = (c.funnels || []).filter(f => f.status !== 'published');
+
+    // Geo info from JSON blob if available
+    let geoInfo = null;
+    try { if (c.geo_targeting && c.geo_targeting !== '{}') geoInfo = JSON.parse(c.geo_targeting); } catch {}
+    const geoText = geoInfo?.city ? `${geoInfo.city} (${geoInfo.radius_km || 25} km Umkreis)` : (c.geo_location_name || null);
+
+    return `
+      <div style="max-width:700px;margin-bottom:32px">
+
+        <!-- Hero status bar -->
+        <div class="camp-hero" style="background:${cfg.heroBg}">
+          <div class="camp-status-pill ${cfg.pillCls}">${cfg.icon} ${cfg.label}</div>
+          <div class="camp-hero-title">${c.name}</div>
+          <div class="camp-hero-sub">${cfg.message}</div>
+          ${cfg.detail ? `<div style="font-size:12px;opacity:.7;margin-top:8px">${cfg.detail}</div>` : ''}
+        </div>
+
+        <!-- Info row: platform, geo, dates -->
+        <div class="info-row">
+          ${c.platform ? `<span>📱 <strong>${c.platform}</strong></span>` : ''}
+          ${geoText ? `<span>📍 ${geoText}</span>` : ''}
+          ${c.target_audience ? `<span>👥 ${c.target_audience}</span>` : ''}
+          ${c.start_date ? `<span>📅 Start: <strong>${formatDate(c.start_date)}</strong></span>` : ''}
+          ${c.end_date ? `<span>🏁 Ende: <strong>${formatDate(c.end_date)}</strong></span>` : ''}
+        </div>
+
+        <!-- Stats grid -->
+        <div class="camp-detail-grid">
+          <div class="camp-detail-item">
+            <div class="camp-detail-label">Anfragen gesamt</div>
+            <div class="camp-detail-value">${c.lead_count}</div>
+            <div class="camp-detail-sub">Alle Anfragen seit Kampagnenstart</div>
+          </div>
+          <div class="camp-detail-item">
+            <div class="camp-detail-label">Erfolgreich abgeschlossen</div>
+            <div class="camp-detail-value" style="color:var(--success)">${c.closed_leads}</div>
+            <div class="camp-detail-sub">Von Ihnen markiert</div>
+          </div>
+        </div>
+
+        ${c.lead_count > 0 ? `
+          <div class="card" style="padding:16px 20px;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:13px;font-weight:600;color:#374151">Ihre Abschluss-Quote</span>
+              <span style="font-size:18px;font-weight:800;color:var(--success)">${successRate}%</span>
+            </div>
+            <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${successRate}%"></div></div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:4px">${c.closed_leads} von ${c.lead_count} Anfragen abgeschlossen</div>
+          </div>
+        ` : ''}
+
+        <!-- Landing Pages -->
+        <div class="camp-section-title">🌐 Ihre Landing Pages</div>
+        ${(c.funnels && c.funnels.length) ? `
+          ${c.funnels.map(f => `
+            <div class="landing-page-card">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="lp-dot ${f.status === 'published' ? 'lp-dot-live' : 'lp-dot-draft'}"></div>
+                <div>
+                  <div style="font-weight:600;font-size:14px">${f.name}</div>
+                  <div style="font-size:12px;color:#6b7280;margin-top:2px">
+                    ${f.status === 'published' ? '✅ Live – erreichbar für Besucher' : '⚪ Entwurf – noch nicht veröffentlicht'}
+                    ${f.published_at ? ' · seit ' + formatDate(f.published_at) : ''}
+                  </div>
+                </div>
+              </div>
+              ${f.status === 'published' && f.slug
+                ? `<a href="/f/${f.slug}/" target="_blank" class="btn btn-primary btn-sm">🔗 Seite öffnen</a>`
+                : `<span style="font-size:12px;color:#9ca3af">In Vorbereitung</span>`}
+            </div>
+          `).join('')}
+        ` : `
+          <div style="padding:20px;background:#f9fafb;border-radius:8px;font-size:13px;color:#6b7280;text-align:center">
+            Noch keine Landing Page eingerichtet. Wir erstellen diese in Kürze für Sie.
+          </div>
+        `}
+
+      </div>
+    `;
   }
 
   loadCampaigns();

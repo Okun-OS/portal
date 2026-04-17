@@ -85,6 +85,11 @@
         </div>
       </div>
 
+      <!-- Campaign status – always shown prominently -->
+      <div id="campaignStatusCard" style="margin-bottom:20px">
+        <div class="loading-overlay">Laden...</div>
+      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 
         <!-- Neueste Leads -->
@@ -98,27 +103,19 @@
           </div>
         </div>
 
-        <!-- Right column -->
-        <div>
-          <!-- Campaign status cards -->
-          <div id="campaignStatusCard" style="margin-bottom:16px">
-            <div class="loading-overlay">Laden...</div>
+        <!-- AI Erklärung -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">&#129504; Ergebnisse verstehen</span>
           </div>
-
-          <!-- AI Erklärung -->
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">&#129504; Ergebnisse verstehen</span>
-            </div>
-            <div class="card-body">
-              <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">
-                Unsere KI erklärt Ihnen Ihre aktuellen Ergebnisse in einfacher Sprache.
-              </p>
-              <button class="btn btn-primary w-full" id="btnExplain" onclick="explainResults()">
-                Ergebnisse erklären lassen
-              </button>
-              <div id="explainResult"></div>
-            </div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px">
+              Unsere KI erklärt Ihnen Ihre aktuellen Ergebnisse in einfacher Sprache.
+            </p>
+            <button class="btn btn-primary w-full" id="btnExplain" onclick="explainResults()">
+              Ergebnisse erklären lassen
+            </button>
+            <div id="explainResult"></div>
           </div>
         </div>
 
@@ -184,28 +181,50 @@
         `).join('');
       }
 
-      // Campaign status – show ALL campaigns
+      // Campaign status – always shown prominently
       const cardEl = document.getElementById('campaignStatusCard');
       try {
         const campaigns = await API.get('/api/client/campaigns');
         if (!campaigns.length) {
-          cardEl.innerHTML = `<div class="campaign-status-card paused"><div class="cs-title">&#9898; Keine Kampagne</div><div class="cs-message">Es läuft noch keine Kampagne. Bitte sprechen Sie uns an.</div></div>`;
+          cardEl.innerHTML = `
+            <div class="card" style="padding:20px;border-left:4px solid #e5e7eb">
+              <div style="font-size:15px;font-weight:700;color:#374151;margin-bottom:4px">📊 Noch keine Kampagne</div>
+              <div style="font-size:13px;color:#6b7280">Es läuft noch keine Kampagne. Bitte sprechen Sie uns an.</div>
+            </div>`;
         } else {
-          const icons = { active: '&#128994;', paused: '&#128993;', ended: '&#9898;' };
-          const cls   = { active: 'active',    paused: 'paused',    ended: 'paused'   };
-          cardEl.innerHTML = campaigns.map(c => `
-            <div class="campaign-status-card ${cls[c.status] || 'paused'}" style="margin-bottom:10px">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <span style="font-size:18px">${icons[c.status] || '&#9898;'}</span>
-                <strong style="font-size:14px">${c.name}</strong>
-              </div>
-              <div style="font-size:12px;display:flex;gap:12px;flex-wrap:wrap;color:rgba(0,0,0,0.6)">
-                ${c.platform ? `<span>&#128247; ${c.platform}</span>` : ''}
-                <span>&#127919; ${c.lead_count} Leads</span>
-                ${c.funnels && c.funnels.filter(f=>f.status==='published').length ? `<span>&#127760; ${c.funnels.filter(f=>f.status==='published').length} Landing Page(s)</span>` : ''}
-              </div>
+          const statusIcons = { active: '🟢', paused: '🟡', ended: '⚪' };
+          const statusLabels = { active: 'Aktiv', paused: 'Pausiert', ended: 'Beendet' };
+          const borderColors = { active: '#16a34a', paused: '#d97706', ended: '#9ca3af' };
+          cardEl.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div style="font-size:14px;font-weight:700;color:#374151">📡 Kampagnen-Status</div>
+              <a href="/client/campaigns.html" style="font-size:13px;color:var(--primary);font-weight:500">Alle Details →</a>
             </div>
-          `).join('') + `<a href="/client/campaigns.html" style="font-size:13px;color:var(--primary);font-weight:500">Alle Details ansehen →</a>`;
+            ${campaigns.map(c => {
+              const publishedLP = (c.funnels || []).filter(f => f.status === 'published' && f.slug);
+              return `
+                <div class="card" style="padding:16px 20px;margin-bottom:10px;border-left:4px solid ${borderColors[c.status] || '#e5e7eb'}">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+                    <div>
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                        <span>${statusIcons[c.status] || '⚪'}</span>
+                        <strong style="font-size:14px">${c.name}</strong>
+                        <span style="font-size:11px;background:#f3f4f6;border-radius:99px;padding:2px 8px;color:#374151">${statusLabels[c.status] || c.status}</span>
+                      </div>
+                      <div style="font-size:12px;color:#6b7280;display:flex;gap:12px;flex-wrap:wrap">
+                        ${c.platform ? `<span>📱 ${c.platform}</span>` : ''}
+                        <span>📋 ${c.lead_count} Anfragen</span>
+                        <span>✅ ${c.closed_leads} Abschlüsse</span>
+                      </div>
+                    </div>
+                    ${publishedLP.length ? `
+                      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                        ${publishedLP.map(f => `<a href="/f/${f.slug}/" target="_blank" class="btn btn-sm btn-outline" style="font-size:11px">🌐 ${f.name}</a>`).join('')}
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>`;
+            }).join('')}`;
         }
       } catch { cardEl.innerHTML = ''; }
 
