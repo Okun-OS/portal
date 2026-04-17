@@ -467,6 +467,23 @@ router.post('/:id/preview', requireAdmin, (req, res) => {
   }
 });
 
+// ── GET /api/admin/funnels/:id/preview ──────────────────────────────────────
+// Renders the funnel HTML in-memory and returns it (no publish, no file write)
+router.get('/:id/preview', requireAdmin, (req, res) => {
+  const funnel = db.prepare('SELECT * FROM funnels WHERE id = ?').get(req.params.id);
+  if (!funnel) return res.status(404).send('Funnel nicht gefunden');
+  const tpl = getTemplate(funnel.template_id);
+  const slug = funnel.slug || 'preview';
+  const data = buildRenderData(funnel, tpl, slug);
+  try {
+    const html = renderTemplate(funnel.template_id, data);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (e) {
+    res.status(500).send('Vorschau-Fehler: ' + e.message);
+  }
+});
+
 // ── POST /api/admin/funnels/:id/publish ──────────────────────────────────────
 router.post('/:id/publish', requireAdmin, (req, res) => {
   const funnel = db.prepare('SELECT * FROM funnels WHERE id = ?').get(req.params.id);

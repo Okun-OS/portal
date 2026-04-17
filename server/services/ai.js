@@ -508,10 +508,18 @@ async function chatWithCampaign({ messages, context }) {
     `${i + 1}. ${q.question} [${(q.options || []).join(' / ')}]`
   ).join('\n');
 
+  const templateList = (context.availableTemplates || []).map(t =>
+    `  - "${t.template_id}": ${t.name} (${t.category || 'Standard'})`
+  ).join('\n');
+
   const system = `Du bist ein KI-Assistent für Performance-Marketing. Du hilfst einem Admin, eine Kampagne zu verfeinern.
 
 KAMPAGNE: ${context.campaign_name || 'unbekannt'} | Plattform: ${context.platform || '?'} | Budget: ${context.budget ? context.budget + '€/Monat' : '?'} | Stadt: ${context.city || '?'}
 Zielgruppe: ${context.target_audience || '?'}
+Aktuelles Template: ${context.template_id || '?'}
+
+VERFÜGBARE TEMPLATES (du kannst das Template wechseln):
+${templateList || '(keine Templates geladen)'}
 
 STRATEGIE:
 ${context.strategy || '(keine)'}
@@ -528,13 +536,15 @@ Antworte AUSSCHLIESSLICH als JSON:
   "changes": {
     "ad_creatives": [...],
     "strategy": "...",
-    "qualification_questions": [...]
+    "qualification_questions": [...],
+    "template_id": "template_id nur wenn gewechselt werden soll"
   }
 }
 "changes" weglassen wenn nichts geändert wurde.
 Bei Änderungen immer die VOLLSTÄNDIGE Liste zurückgeben (nicht nur geänderte Einträge).
 Ad-Creative Format: {"type":"hook|headline|body|cta","title":"...","content":"..."}
-Qual-Fragen Format: {"question":"...","type":"radio","options":["...","..."]}`;
+Qual-Fragen Format: {"question":"...","type":"radio","options":["...","..."]}
+Wenn der Admin ein bestimmtes Template möchte: gib template_id aus der verfügbaren Liste zurück.`;
 
   const msg = await client.messages.create({
     model: MODEL,

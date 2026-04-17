@@ -381,11 +381,23 @@ router.post('/auto-campaign', requireAdmin, async (req, res) => {
 
 // ── POST /api/admin/ai/campaign-chat ─────────────────────────────────────────
 router.post('/campaign-chat', requireAdmin, async (req, res) => {
-  const { campaign_id, messages, context } = req.body;
+  const { campaign_id, funnel_id, messages, context } = req.body;
   if (!messages || !messages.length) return res.status(400).json({ error: 'Nachrichten erforderlich' });
 
   try {
-    const result = await ai.chatWithCampaign({ messages, context: context || {} });
+    // Build template list: static + custom from DB
+    const staticTemplates = getAllTemplates();
+    let customTemplates = [];
+    try {
+      customTemplates = db.prepare('SELECT template_id, name, description FROM custom_templates').all()
+        .map(t => ({ template_id: t.template_id, name: t.name, category: 'Custom', description: t.description || '' }));
+    } catch {}
+    const allTemplates = [...staticTemplates, ...customTemplates];
+
+    const result = await ai.chatWithCampaign({
+      messages,
+      context: { ...context, availableTemplates: allTemplates },
+    });
 
     if (campaign_id && result.changes) {
       if (result.changes.ad_creatives && result.changes.ad_creatives.length) {
@@ -400,6 +412,12 @@ router.post('/campaign-chat', requireAdmin, async (req, res) => {
         if (existing) {
           db.prepare(`UPDATE ai_analyses SET result = ? WHERE id = ?`).run(result.changes.strategy, existing.id);
         }
+      }
+      // Template switch: if AI recommends a different template, update the funnel
+      if (result.changes.template_id && funnel_id) {
+        db.prepare(`UPDATE funnels SET template_id = ?, updated_at = datetime('now') WHERE id = ?`)
+          .run(result.changes.template_id, funnel_id);
+        result.template_changed = { template_id: result.changes.template_id };
       }
     }
 

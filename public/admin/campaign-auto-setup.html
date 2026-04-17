@@ -197,20 +197,23 @@
           <div id="resultsCard" style="display:none">
 
             <!-- Template badge -->
-            <div id="tplBadgeWrap" style="margin-bottom:4px;display:none">
+            <div id="tplBadgeWrap" style="margin-bottom:8px;display:none">
               <span class="tpl-badge" id="tplBadge">🎨 Template: –</span>
-              <a id="tplEditorLink" href="#" style="font-size:12px;color:var(--primary);margin-left:8px">Im Editor öffnen →</a>
+              <a id="tplEditorLink" href="#" target="_blank" style="font-size:12px;color:var(--primary);margin-left:8px">Im Editor öffnen ↗</a>
             </div>
 
             <!-- Funnel -->
             <div class="card" style="padding:20px;margin-bottom:16px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <div style="font-size:14px;font-weight:700">🌐 Landing Page</div>
-                <span style="font-size:11px;background:#fef9c3;color:#92400e;border-radius:99px;padding:2px 10px;font-weight:600">Entwurf – noch nicht veröffentlicht</span>
+                <span id="funnelStatusBadge" style="font-size:11px;background:#fef9c3;color:#92400e;border-radius:99px;padding:2px 10px;font-weight:600">Entwurf</span>
               </div>
-              <p style="font-size:13px;color:#6b7280;margin:0 0 12px">Inhalte sind fertig. Jetzt veröffentlichen damit sie live geht.</p>
-              <button class="btn btn-primary" id="btnPublish" onclick="publishFunnel()">🚀 Landing Page veröffentlichen</button>
-              <a id="lpLink" href="#" target="_blank" class="btn btn-outline btn-sm" style="margin-left:8px;display:none">🔗 Seite öffnen</a>
+              <p style="font-size:13px;color:#6b7280;margin:0 0 12px">Erst Vorschau prüfen, dann veröffentlichen.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-outline" onclick="previewFunnel()">👁 Vorschau</button>
+                <button class="btn btn-primary" id="btnPublish" onclick="publishFunnel()">🚀 Veröffentlichen</button>
+                <a id="lpLink" href="#" target="_blank" class="btn btn-outline btn-sm" style="display:none">🔗 Live öffnen</a>
+              </div>
             </div>
 
             <!-- Strategy -->
@@ -367,6 +370,16 @@
       document.getElementById('campName').placeholder = c.company_name + ' – Kampagne';
       if (c.address) document.getElementById('campCity').value = c.address;
     } catch(e) {}
+
+    // Restore session if returning from editor
+    const saved = sessionStorage.getItem('autoSetup_' + customerId);
+    if (saved) {
+      try {
+        resultData = JSON.parse(saved);
+        showResults(resultData);
+        showToast('Setup-Ergebnis wiederhergestellt');
+      } catch {}
+    }
   }
 
   function setStep(n, state) {
@@ -443,6 +456,7 @@
       setStep(1,'done'); setStep(2,'done'); setStep(3,'done'); setStep(4,'done'); setStep(5,'done');
 
       resultData = res;
+      sessionStorage.setItem('autoSetup_' + customerId, JSON.stringify(res));
       showResults(res);
       showToast('Fertig! Alle Assets wurden erstellt.');
     } catch(e) {
@@ -583,9 +597,11 @@
     try {
       const res = await API.post('/api/admin/ai/campaign-chat', {
         campaign_id: resultData?.campaign_id,
+        funnel_id: resultData?.funnel_id,
         messages: chatHistory,
         context: {
           campaign_name: resultData?.campaign_name,
+          template_id: resultData?.template_id,
           platform: document.getElementById('campPlatform').value,
           target_audience: document.getElementById('campTarget').value,
           budget: document.getElementById('campBudget').value,
@@ -605,26 +621,27 @@
           resultData.ad_creatives = res.changes.ad_creatives;
           showCreatives(res.changes.ad_creatives);
           const el = document.getElementById('creativesList');
-          el.classList.remove('highlight-update');
-          void el.offsetWidth;
-          el.classList.add('highlight-update');
+          el.classList.remove('highlight-update'); void el.offsetWidth; el.classList.add('highlight-update');
         }
         if (res.changes.strategy) {
           resultData.strategy = res.changes.strategy;
           const el = document.getElementById('strategyText');
           el.textContent = res.changes.strategy;
-          el.classList.remove('highlight-update');
-          void el.offsetWidth;
-          el.classList.add('highlight-update');
+          el.classList.remove('highlight-update'); void el.offsetWidth; el.classList.add('highlight-update');
         }
         if (res.changes.qualification_questions) {
           resultData.qualification_questions = res.changes.qualification_questions;
           showQualQuestions(res.changes.qualification_questions);
           const el = document.getElementById('qualList');
-          el.classList.remove('highlight-update');
-          void el.offsetWidth;
-          el.classList.add('highlight-update');
+          el.classList.remove('highlight-update'); void el.offsetWidth; el.classList.add('highlight-update');
         }
+      }
+      // Template wechsel durch KI
+      if (res.template_changed) {
+        resultData.template_id = res.template_changed.template_id;
+        document.getElementById('tplBadge').textContent = '🎨 Template: ' + res.template_changed.template_id;
+        sessionStorage.setItem('autoSetup_' + customerId, JSON.stringify(resultData));
+        showToast('Template gewechselt: ' + res.template_changed.template_id);
       }
     } catch(e) {
       typingDiv.remove();
@@ -640,6 +657,11 @@
     setTimeout(() => location.href = '/admin/customers.html', 1500);
   }
 
+  function previewFunnel() {
+    if (!resultData?.funnel_id) return showToast('Kein Funnel vorhanden', 'error');
+    window.open('/api/admin/funnels/' + resultData.funnel_id + '/preview', '_blank');
+  }
+
   async function publishFunnel() {
     if (!resultData?.funnel_id) return;
     const btn = document.getElementById('btnPublish');
@@ -647,11 +669,14 @@
     try {
       const res = await API.post('/api/admin/funnels/' + resultData.funnel_id + '/publish', {});
       btn.textContent = '✅ Veröffentlicht!';
+      document.getElementById('funnelStatusBadge').textContent = 'Live ✓';
+      document.getElementById('funnelStatusBadge').style.background = '#dcfce7';
+      document.getElementById('funnelStatusBadge').style.color = '#16a34a';
       const link = document.getElementById('lpLink');
       link.href = res.url || '/f/' + res.slug + '/';
       link.style.display = 'inline-flex';
       showToast('Landing Page ist live!');
-    } catch(e) { showToast(e.message, 'error'); btn.disabled = false; btn.textContent = '🚀 Landing Page veröffentlichen'; }
+    } catch(e) { showToast(e.message, 'error'); btn.disabled = false; btn.textContent = '🚀 Veröffentlichen'; }
   }
 
   async function goLive() {
