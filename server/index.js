@@ -61,6 +61,13 @@ app.use('/api/client/documents', require('./routes/client/documents'));
 app.use('/api/client/settings', require('./routes/client/settings'));
 app.use('/api/client/explain', require('./routes/client/explain'));
 
+// Config endpoint for frontend (exposes only safe public config)
+app.get('/api/admin/config', requireAdmin, (req, res) => {
+  res.json({
+    mapsKey: process.env.GOOGLE_MAPS_KEY || ''
+  });
+});
+
 // SPA fallback – serve index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
