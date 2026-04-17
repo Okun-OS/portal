@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kampagnen-Wizard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .wizard-progress{display:flex;align-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:var(--radius);padding:16px 24px;margin-bottom:24px;overflow-x:auto;}
+    .wizard-step{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:72px;}
+    .wizard-step .wp-num{width:32px;height:32px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#6b7280;transition:all .2s;}
+    .wizard-step span{font-size:11px;color:#6b7280;text-align:center;white-space:nowrap;}
+    .wizard-step.active .wp-num{background:var(--primary);color:#fff;}
+    .wizard-step.active span{color:var(--primary);font-weight:600;}
+    .wizard-step.done .wp-num{background:#dcfce7;color:#15803d;}
+    .wizard-step.done span{color:#15803d;}
+    .wp-line{flex:1;height:2px;background:#e5e7eb;min-width:16px;margin:0 4px;margin-bottom:16px;}
+    .step-content{display:none;}
+    .step-content.active{display:block;}
+    .step-content h2{font-size:18px;font-weight:700;margin:0 0 4px;}
+    .step-content>.step-desc{color:#6b7280;font-size:13px;margin:0 0 20px;}
+    .wizard-footer{display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;}
+    .geo-result-box{background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:16px;}
+    .geo-label{font-size:10px;font-weight:700;letter-spacing:.5px;margin-bottom:4px;}
+    .geo-platform-box{background:#fff;border-radius:6px;padding:10px;margin-bottom:8px;}
+    .ki-result{white-space:pre-wrap;font-size:13px;line-height:1.7;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;max-height:480px;overflow-y:auto;}
+    .funnel-card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+    .creative-card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:8px;}
+    .creative-card .cc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+    .creative-card .cc-body{font-size:12px;color:#374151;white-space:pre-wrap;max-height:80px;overflow:hidden;}
+    .perf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+    .perf-card{background:#f9fafb;border-radius:8px;padding:10px;text-align:center;}
+    .perf-val{font-size:22px;font-weight:700;}
+    .perf-label{font-size:11px;color:#6b7280;}
+    #map{width:100%;height:380px;border-radius:8px;border:1px solid #e5e7eb;}
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><div class="logo-dot">&#9741;</div>Lead Portal<span class="sidebar-badge admin">Admin</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" data-key="dashboard" onclick="location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Kunden &amp; Leads</span></div>
+      <div class="nav-item" data-key="customers" onclick="location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" data-key="leads" onclick="location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-section"><span class="nav-section-label">Kampagnen</span></div>
+      <div class="nav-item active" data-key="campaigns" onclick="location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen</div>
+      <div class="nav-item" data-key="analytics" onclick="location.href='/admin/analytics.html'"><span class="nav-icon">&#128200;</span> Analytics</div>
+      <div class="nav-section"><span class="nav-section-label">Funnel</span></div>
+      <div class="nav-item" data-key="funnels" onclick="location.href='/admin/funnels.html'"><span class="nav-icon">&#127915;</span> Funnels</div>
+      <div class="nav-section"><span class="nav-section-label">KI-Tools</span></div>
+      <div class="nav-item" data-key="ai" onclick="location.href='/admin/ai-tools.html'"><span class="nav-icon">&#129504;</span> Analyse &amp; Studio</div>
+      <div class="nav-item" data-key="tasks" onclick="location.href='/admin/tasks.html'"><span class="nav-icon">&#9989;</span> Optimierungs-Tasks</div>
+      <div class="nav-section"><span class="nav-section-label">Dokumente</span></div>
+      <div class="nav-item" data-key="documents" onclick="location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px">
+          <a href="/admin/customers.html" style="color:var(--primary)">Kunden</a> ›
+          <a href="/admin/customers.html" id="breadcrumbCustomer" style="color:var(--primary)">...</a> ›
+          <span id="breadcrumbCampaign">Neue Kampagne</span>
+        </div>
+        <h1 class="page-title" id="pageTitle">Kampagnen-Wizard</h1>
+      </div>
+      <button class="btn btn-secondary" onclick="location.href='/admin/customers.html'">← Zurück</button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="wizard-progress">
+      <div class="wizard-step active" id="wp-1" onclick="goToStep(1)"><div class="wp-num">1</div><span>Setup</span></div>
+      <div class="wp-line"></div>
+      <div class="wizard-step" id="wp-2" onclick="goToStep(2)"><div class="wp-num">2</div><span>Geo-Targeting</span></div>
+      <div class="wp-line"></div>
+      <div class="wizard-step" id="wp-3" onclick="goToStep(3)"><div class="wp-num">3</div><span>KI-Plan</span></div>
+      <div class="wp-line"></div>
+      <div class="wizard-step" id="wp-4" onclick="goToStep(4)"><div class="wp-num">4</div><span>Funnel</span></div>
+      <div class="wp-line"></div>
+      <div class="wizard-step" id="wp-5" onclick="goToStep(5)"><div class="wp-num">5</div><span>Creatives</span></div>
+      <div class="wp-line"></div>
+      <div class="wizard-step" id="wp-6" onclick="goToStep(6)"><div class="wp-num">6</div><span>Performance</span></div>
+    </div>
+
+    <div class="page-body">
+      <div class="card" style="padding:24px">
+
+        <!-- Step 1: Setup -->
+        <div id="step-1" class="step-content active">
+          <h2>Kampagnen-Setup</h2>
+          <p class="step-desc">Grundeinstellungen für diese Kampagne.</p>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Kampagnenname <span class="required">*</span></label><input type="text" id="s1Name" class="form-control" placeholder="z.B. Google Suche – Immobilien München"></div>
+            <div class="form-group"><label class="form-label">Plattform</label>
+              <select id="s1Platform" class="form-control">
+                <option value="">-- Auswählen --</option>
+                <option value="Google">Google Ads</option>
+                <option value="Facebook">Facebook / Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Sonstiges">Sonstiges</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Budget/Monat (€)</label><input type="number" id="s1Budget" class="form-control" placeholder="z.B. 500"></div>
+            <div class="form-group"><label class="form-label">Status</label>
+              <select id="s1Status" class="form-control">
+                <option value="active">Aktiv</option>
+                <option value="paused">Pausiert</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Startdatum</label><input type="date" id="s1Start" class="form-control"></div>
+            <div class="form-group"><label class="form-label">Enddatum</label><input type="date" id="s1End" class="form-control"></div>
+            <div class="form-group col-span-2"><label class="form-label">Zielgruppe</label><input type="text" id="s1Target" class="form-control" placeholder="z.B. Hausbesitzer 45+, Bayern"></div>
+            <div class="form-group col-span-2"><label class="form-label">Beschreibung</label><textarea id="s1Desc" class="form-control" rows="2" placeholder="Interne Notizen..."></textarea></div>
+          </div>
+        </div>
+
+        <!-- Step 2: Geo-Targeting -->
+        <div id="step-2" class="step-content">
+          <h2>Geo-Targeting</h2>
+          <p class="step-desc">Klicke auf die Karte um den Zielort zu wählen, dann stelle den Umkreis ein.</p>
+          <div style="display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start">
+            <div>
+              <div id="mapContainer"><div id="map"></div></div>
+              <div style="margin-top:12px">
+                <label class="form-label">Umkreis: <strong id="radiusLabel">25 km</strong></label>
+                <input type="range" id="radiusSlider" min="5" max="50" step="5" value="25" style="width:100%" oninput="onRadiusChange(this.value)">
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af"><span>5 km</span><span>10 km</span><span>25 km</span><span>50 km</span></div>
+              </div>
+            </div>
+            <div>
+              <div id="geoResultBox" class="geo-result-box" style="display:none">
+                <div style="font-size:13px;font-weight:700;color:#15803d;margin-bottom:12px">📍 Geo-Targeting gesetzt</div>
+                <div style="margin-bottom:8px"><span style="font-size:11px;color:#6b7280">Stadt / Ort</span><br><strong id="geoCity" style="font-size:15px"></strong></div>
+                <div style="margin-bottom:12px"><span style="font-size:11px;color:#6b7280">Radius</span><br><strong id="geoRadius"></strong></div>
+                <div class="geo-platform-box">
+                  <div class="geo-label" style="color:#1d4ed8">META ADS TARGETING</div>
+                  <div style="font-size:12px" id="geoMetaText"></div>
+                </div>
+                <div class="geo-platform-box">
+                  <div class="geo-label" style="color:#15803d">GOOGLE ADS LOCATION</div>
+                  <div style="font-size:12px" id="geoGoogleText"></div>
+                </div>
+              </div>
+              <div id="geoHint" style="font-size:12px;color:#9ca3af;padding:12px 0">ℹ️ Klicke auf die Karte um einen Standort zu wählen.<br><br>Kein Geo-Targeting? Schritt kann übersprungen werden.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: KI-Kampagnenplaner -->
+        <div id="step-3" class="step-content">
+          <h2>KI-Kampagnenplaner</h2>
+          <p class="step-desc">Die KI generiert einen vollständigen Kampagnenplan basierend auf deinen Einstellungen.</p>
+          <div id="step3Context" style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap"></div>
+          <button class="btn btn-primary" id="btnGenPlan" onclick="generateKIPlan()" style="margin-bottom:16px">✨ KI-Kampagnenplan generieren</button>
+          <div id="kiPlanLoading" style="display:none;padding:20px;text-align:center;color:#6b7280">⏳ KI denkt nach (ca. 15–30 Sekunden)...</div>
+          <div id="kiPlanResult" style="display:none"><div id="kiPlanContent" class="ki-result"></div></div>
+        </div>
+
+        <!-- Step 4: Funnel Builder -->
+        <div id="step-4" class="step-content">
+          <h2>Funnel Builder</h2>
+          <p class="step-desc">Erstelle Landing Pages für diese Kampagne.</p>
+          <div id="funnelsList" style="margin-bottom:16px"><div class="text-muted text-sm">Laden...</div></div>
+          <button class="btn btn-primary" id="btnNewFunnel" onclick="openFunnelBuilder()">+ Neuen Funnel erstellen</button>
+        </div>
+
+        <!-- Step 5: Creatives & Texte -->
+        <div id="step-5" class="step-content">
+          <h2>Creatives &amp; Texte</h2>
+          <p class="step-desc">Ad-Creatives für diese Kampagne verwalten.</p>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span></span>
+            <button class="btn btn-sm btn-outline" onclick="location.href='/admin/ai-tools.html'">+ Im KI-Studio erstellen</button>
+          </div>
+          <div id="creativesList"><div class="text-muted text-sm">Laden...</div></div>
+        </div>
+
+        <!-- Step 6: Performance -->
+        <div id="step-6" class="step-content">
+          <h2>Performance</h2>
+          <p class="step-desc">Metriken und Leads dieser Kampagne.</p>
+          <div id="perfGrid" class="perf-grid"></div>
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:#374151">Leads</div>
+          <div id="perfLeads"></div>
+          <div style="margin-top:12px">
+            <a href="/admin/analytics.html" class="btn btn-sm btn-outline">📊 Vollständige Analytics</a>
+            <a href="/admin/leads.html" class="btn btn-sm btn-outline" style="margin-left:8px">📋 Alle Leads</a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="wizard-footer">
+          <button class="btn btn-secondary" id="btnBack" onclick="goToStep(currentStep-1)">← Zurück</button>
+          <span style="font-size:12px;color:#9ca3af">Schritt <span id="stepNum">1</span> von 6</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" id="btnNext" onclick="nextStep()">Weiter →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999;"></div>
+<style>.toast-success{background:#16a34a}.toast-error{background:#dc2626}</style>
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+  initNav('campaigns');
+
+  const urlParams = new URLSearchParams(location.search);
+  let campaignId = urlParams.get('campaign_id') ? parseInt(urlParams.get('campaign_id')) : null;
+  const customerId = parseInt(urlParams.get('customer_id'));
+  let currentStep = 1;
+  let campaign = {};
+  let customerData = null;
+  let currentGeo = null;
+  let currentAiPlan = null;
+  let mapObj = null, markerObj = null, circleObj = null;
+
+  async function init() {
+    if (!customerId) { location.href = '/admin/customers.html'; return; }
+    try {
+      customerData = await API.get('/api/admin/customers/' + customerId);
+      document.getElementById('breadcrumbCustomer').textContent = customerData.company_name;
+    } catch(e) {}
+
+    if (campaignId) {
+      try {
+        campaign = await API.get('/api/admin/campaigns/' + campaignId);
+        document.getElementById('breadcrumbCampaign').textContent = campaign.name;
+        document.getElementById('pageTitle').textContent = campaign.name;
+        populateStep1(campaign);
+        if (campaign.geo_targeting) {
+          try { currentGeo = JSON.parse(campaign.geo_targeting); } catch {}
+        }
+        if (campaign.ai_plan && campaign.ai_plan !== '{}') {
+          try { currentAiPlan = JSON.parse(campaign.ai_plan); } catch {}
+        }
+        currentStep = campaign.wizard_step || 1;
+      } catch(e) { showToast('Kampagne nicht gefunden', 'error'); }
+    }
+
+    await loadMaps();
+    goToStep(currentStep);
+  }
+
+  function populateStep1(c) {
+    document.getElementById('s1Name').value = c.name || '';
+    document.getElementById('s1Platform').value = c.platform || '';
+    document.getElementById('s1Budget').value = c.budget_monthly || '';
+    document.getElementById('s1Status').value = c.status || 'active';
+    document.getElementById('s1Start').value = c.start_date || '';
+    document.getElementById('s1End').value = c.end_date || '';
+    document.getElementById('s1Target').value = c.target_audience || '';
+    document.getElementById('s1Desc').value = c.description || '';
+  }
+
+  function goToStep(step) {
+    if (step < 1 || step > 6) return;
+    if (step > 1 && !campaignId) { showToast('Bitte erst Setup speichern', 'error'); return; }
+
+    document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+    document.getElementById('step-' + step).classList.add('active');
+    document.querySelectorAll('.wizard-step').forEach((el, i) => {
+      el.classList.remove('active', 'done');
+      if (i + 1 < step) el.classList.add('done');
+      if (i + 1 === step) el.classList.add('active');
+    });
+    currentStep = step;
+    document.getElementById('stepNum').textContent = step;
+    document.getElementById('btnBack').style.visibility = step === 1 ? 'hidden' : 'visible';
+    document.getElementById('btnNext').textContent = step === 6 ? '✓ Fertig' : 'Weiter →';
+
+    if (step === 2) { restoreGeoUI(); }
+    if (step === 3) { updateStep3Context(); if (currentAiPlan) displayKIPlan(currentAiPlan); }
+    if (step === 4) loadFunnels();
+    if (step === 5) loadCreatives();
+    if (step === 6) loadPerformance();
+  }
+
+  async function nextStep() {
+    if (currentStep === 6) { location.href = '/admin/customers.html'; return; }
+    if (currentStep === 1) { await saveStep1(); return; }
+    if (currentStep === 2) { await saveStep2(); return; }
+    goToStep(currentStep + 1);
+  }
+
+  async function saveStep1() {
+    const name = document.getElementById('s1Name').value.trim();
+    if (!name) { showToast('Kampagnenname fehlt', 'error'); return; }
+    const body = {
+      customer_id: customerId,
+      name,
+      platform: document.getElementById('s1Platform').value || null,
+      budget_monthly: parseFloat(document.getElementById('s1Budget').value) || 0,
+      status: document.getElementById('s1Status').value,
+      start_date: document.getElementById('s1Start').value || null,
+      end_date: document.getElementById('s1End').value || null,
+      target_audience: document.getElementById('s1Target').value || null,
+      description: document.getElementById('s1Desc').value || null,
+      wizard_step: 1,
+    };
+    try {
+      if (campaignId) {
+        await API.put('/api/admin/campaigns/' + campaignId, body);
+      } else {
+        const res = await API.post('/api/admin/campaigns', body);
+        campaignId = res.id;
+        history.replaceState({}, '', '?campaign_id=' + campaignId + '&customer_id=' + customerId);
+      }
+      campaign = { ...campaign, ...body, id: campaignId };
+      document.getElementById('breadcrumbCampaign').textContent = name;
+      document.getElementById('pageTitle').textContent = name;
+      showToast('Setup gespeichert');
+      goToStep(2);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function saveStep2() {
+    if (currentGeo) {
+      try {
+        await API.put('/api/admin/campaigns/' + campaignId, { geo_targeting: JSON.stringify(currentGeo), wizard_step: 2 });
+        showToast('Geo-Targeting gespeichert');
+      } catch(e) { showToast(e.message, 'error'); return; }
+    }
+    goToStep(3);
+  }
+
+  // ── Google Maps ────────────────────────────────────────────────────────────
+  async function loadMaps() {
+    try {
+      const cfg = await API.get('/api/admin/config');
+      if (!cfg.mapsKey) {
+        document.getElementById('map').innerHTML = '<div style="padding:20px;color:#6b7280;font-size:13px">Google Maps API-Key nicht konfiguriert.<br>Bitte <code>GOOGLE_MAPS_KEY</code> in .env eintragen.</div>';
+        return;
+      }
+      window._mapsKey = cfg.mapsKey;
+      window.initMap = function() {
+        mapObj = new google.maps.Map(document.getElementById('map'), {
+          center: { lat: 51.1657, lng: 10.4515 }, zoom: 6
+        });
+        mapObj.addListener('click', onMapClick);
+        if (currentGeo) restoreGeoUI();
+      };
+      const s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + cfg.mapsKey + '&callback=initMap';
+      s.async = true;
+      document.head.appendChild(s);
+    } catch(e) {}
+  }
+
+  function onMapClick(e) {
+    const lat = e.latLng.lat(), lng = e.latLng.lng();
+    placeMarker(lat, lng);
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      let city = 'Unbekannt';
+      if (status === 'OK' && results[0]) {
+        city = results[0].address_components.find(c => c.types.includes('locality'))?.long_name
+            || results[0].address_components.find(c => c.types.includes('administrative_area_level_3'))?.long_name
+            || results[0].address_components.find(c => c.types.includes('administrative_area_level_1'))?.long_name
+            || 'Unbekannt';
+      }
+      const radius = parseInt(document.getElementById('radiusSlider').value);
+      setGeoResult(lat, lng, city, radius);
+    });
+  }
+
+  function placeMarker(lat, lng) {
+    if (markerObj) markerObj.setMap(null);
+    if (circleObj) circleObj.setMap(null);
+    markerObj = new google.maps.Marker({ position: { lat, lng }, map: mapObj });
+    const radius = parseInt(document.getElementById('radiusSlider').value) * 1000;
+    circleObj = new google.maps.Circle({
+      strokeColor: '#4f46e5', strokeOpacity: 0.8, strokeWeight: 2,
+      fillColor: '#4f46e5', fillOpacity: 0.12,
+      map: mapObj, center: { lat, lng }, radius
+    });
+    mapObj.fitBounds(circleObj.getBounds());
+  }
+
+  function onRadiusChange(val) {
+    document.getElementById('radiusLabel').textContent = val + ' km';
+    if (!currentGeo) return;
+    const radius = parseInt(val);
+    currentGeo.radius_km = radius;
+    currentGeo.meta_text = 'Menschen in ' + radius + 'km Umkreis von ' + currentGeo.city;
+    currentGeo.google_text = 'Location: ' + currentGeo.city + ' +' + radius + 'km radius';
+    document.getElementById('geoRadius').textContent = radius + ' km';
+    document.getElementById('geoMetaText').textContent = currentGeo.meta_text;
+    document.getElementById('geoGoogleText').textContent = currentGeo.google_text;
+    if (markerObj && circleObj) {
+      circleObj.setRadius(radius * 1000);
+      mapObj.fitBounds(circleObj.getBounds());
+    }
+  }
+
+  function setGeoResult(lat, lng, city, radius) {
+    currentGeo = { lat, lng, city, radius_km: radius,
+      meta_text: 'Menschen in ' + radius + 'km Umkreis von ' + city,
+      google_text: 'Location: ' + city + ' +' + radius + 'km radius'
+    };
+    document.getElementById('geoCity').textContent = city;
+    document.getElementById('geoRadius').textContent = radius + ' km';
+    document.getElementById('geoMetaText').textContent = currentGeo.meta_text;
+    document.getElementById('geoGoogleText').textContent = currentGeo.google_text;
+    document.getElementById('geoResultBox').style.display = 'block';
+    document.getElementById('geoHint').style.display = 'none';
+  }
+
+  function restoreGeoUI() {
+    if (!currentGeo || !mapObj) return;
+    placeMarker(currentGeo.lat, currentGeo.lng);
+    document.getElementById('radiusSlider').value = currentGeo.radius_km || 25;
+    document.getElementById('radiusLabel').textContent = (currentGeo.radius_km || 25) + ' km';
+    setGeoResult(currentGeo.lat, currentGeo.lng, currentGeo.city, currentGeo.radius_km || 25);
+  }
+
+  // ── Step 3: KI-Plan ────────────────────────────────────────────────────────
+  function updateStep3Context() {
+    const parts = [];
+    if (campaign.budget_monthly) parts.push('💰 ' + campaign.budget_monthly + '€/Mo');
+    if (campaign.platform) parts.push('📱 ' + campaign.platform);
+    if (currentGeo?.city) parts.push('📍 ' + currentGeo.city + ' (' + currentGeo.radius_km + 'km)');
+    if (customerData?.industry) parts.push('🏢 ' + customerData.industry);
+    document.getElementById('step3Context').innerHTML = parts.map(p => '<span style="background:#fff;border:1px solid #86efac;border-radius:20px;padding:3px 10px;font-size:12px;color:#15803d">' + p + '</span>').join('') || '<span class="text-muted text-sm">Keine Kontext-Daten</span>';
+  }
+
+  async function generateKIPlan() {
+    const btn = document.getElementById('btnGenPlan');
+    btn.disabled = true;
+    document.getElementById('kiPlanLoading').style.display = 'block';
+    document.getElementById('kiPlanResult').style.display = 'none';
+    try {
+      const body = {
+        city: currentGeo?.city || campaign.target_audience || customerData?.address || '',
+        budget: campaign.budget_monthly || 0,
+        radius_km: currentGeo?.radius_km,
+        platform: campaign.platform,
+        customer_id: customerId,
+        company: customerData?.company_name,
+        industry: customerData?.industry,
+      };
+      const res = await API.post('/api/admin/ai/campaign-planner', body);
+      currentAiPlan = res;
+      displayKIPlan(res.result || res);
+      await API.put('/api/admin/campaigns/' + campaignId, { ai_plan: JSON.stringify(res), wizard_step: 3 });
+      document.getElementById('kiPlanResult').style.display = 'block';
+    } catch(e) { showToast(e.message, 'error'); }
+    finally { btn.disabled = false; document.getElementById('kiPlanLoading').style.display = 'none'; }
+  }
+
+  function displayKIPlan(result) {
+    const text = typeof result === 'string' ? result : (result.result || JSON.stringify(result, null, 2));
+    document.getElementById('kiPlanContent').textContent = text;
+  }
+
+  // ── Step 4: Funnels ────────────────────────────────────────────────────────
+  async function loadFunnels() {
+    const el = document.getElementById('funnelsList');
+    try {
+      const funnels = await API.get('/api/admin/funnels?customer_id=' + customerId);
+      const mine = funnels.filter(f => !campaignId || f.campaign_id == campaignId);
+      if (!mine.length) { el.innerHTML = '<div class="text-muted text-sm">Noch kein Funnel für diese Kampagne.</div>'; return; }
+      el.innerHTML = mine.map(f => `
+        <div class="funnel-card">
+          <div><strong>${f.name}</strong> <span class="badge">${f.status}</span></div>
+          <div style="display:flex;gap:6px">
+            ${f.status === 'published' && f.slug ? `<a href="/f/${f.slug}/" target="_blank" class="btn btn-sm btn-outline">🔗 Vorschau</a>` : ''}
+            <a href="/admin/funnels.html?funnel_id=${f.id}" class="btn btn-sm btn-secondary">✏️ Bearbeiten</a>
+          </div>
+        </div>`).join('');
+    } catch { el.innerHTML = '<div class="text-muted text-sm">Fehler beim Laden</div>'; }
+  }
+
+  function openFunnelBuilder() {
+    let url = '/admin/funnels.html?customer_id=' + customerId;
+    if (campaignId) url += '&campaign_id=' + campaignId;
+    location.href = url;
+  }
+
+  // ── Step 5: Creatives ──────────────────────────────────────────────────────
+  async function loadCreatives() {
+    const el = document.getElementById('creativesList');
+    try {
+      let url = '/api/admin/ai/creatives?customer_id=' + customerId;
+      if (campaignId) url += '&campaign_id=' + campaignId;
+      const creatives = await API.get(url);
+      if (!creatives.length) { el.innerHTML = '<div class="text-muted text-sm">Noch keine Creatives.<br>Im KI-Studio erstellen oder aus dem KI-Plan übernehmen.</div>'; return; }
+      const typeLabel = { hook:'Hook', headline:'Headline', body:'Anzeigentext', cta:'CTA', landing_page:'Landingpage' };
+      el.innerHTML = creatives.map(cr => `
+        <div class="creative-card">
+          <div class="cc-header">
+            <strong style="font-size:13px">${cr.title}</strong>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="badge" style="font-size:10px">${typeLabel[cr.type] || cr.type}</span>
+              <span class="badge badge-${cr.status === 'active' ? 'success' : 'default'}" style="font-size:10px">${cr.status}</span>
+            </div>
+          </div>
+          <div class="cc-body">${cr.content}</div>
+        </div>`).join('');
+    } catch { el.innerHTML = '<div class="text-muted text-sm">Fehler beim Laden</div>'; }
+  }
+
+  // ── Step 6: Performance ────────────────────────────────────────────────────
+  async function loadPerformance() {
+    const gridEl = document.getElementById('perfGrid');
+    const leadsEl = document.getElementById('perfLeads');
+    if (!campaignId) { gridEl.innerHTML = '<div class="text-muted text-sm">Kampagne noch nicht gespeichert.</div>'; return; }
+    try {
+      const detail = await API.get('/api/admin/campaigns/' + campaignId);
+      const leads = detail.leads || [];
+      const metrics = await API.get('/api/admin/metrics?campaign_id=' + campaignId).catch(() => []);
+      const totals = metrics.reduce((a, m) => ({ imp: a.imp + (m.impressions||0), clicks: a.clicks + (m.clicks||0), spend: a.spend + (m.spend||0), leads: a.leads + (m.leads_generated||0) }), { imp:0, clicks:0, spend:0, leads:0 });
+      const ctr = totals.imp > 0 ? ((totals.clicks / totals.imp)*100).toFixed(2) + '%' : '—';
+      const cpl = totals.leads > 0 && totals.spend > 0 ? (totals.spend / totals.leads).toFixed(2) + '€' : '—';
+      gridEl.innerHTML = [
+        ['Impressionen', totals.imp.toLocaleString('de-DE'), '#eff6ff', '#1d4ed8'],
+        ['Klicks / CTR', totals.clicks.toLocaleString('de-DE') + ' / ' + ctr, '#fdf4ff', '#7c3aed'],
+        ['Ausgaben / CPL', totals.spend.toFixed(2) + '€ / ' + cpl, '#fff7ed', '#c2410c'],
+        ['Leads gesamt', leads.length, '#f0fdf4', '#15803d'],
+        ['Neue Leads', leads.filter(l=>l.status==='new').length, '#f9fafb', '#374151'],
+        ['Abschlüsse', leads.filter(l=>l.status==='closed').length, '#f0fdf4', '#15803d'],
+      ].map(([label, val, bg, color]) => `<div class="perf-card" style="background:${bg}"><div class="perf-label">${label}</div><div class="perf-val" style="color:${color}">${val}</div></div>`).join('');
+      leadsEl.innerHTML = !leads.length ? '<div class="text-muted text-sm">Noch keine Leads.</div>' : `
+        <table><thead><tr><th>Name</th><th>Status</th><th>Quelle</th><th>Datum</th></tr></thead>
+        <tbody>${leads.slice(0,10).map(l => `<tr><td>${l.name}</td><td>${statusBadge(l.status)}</td><td>${l.source||'—'}</td><td>${formatDate(l.created_at)}</td></tr>`).join('')}</tbody></table>`;
+    } catch(e) { gridEl.innerHTML = '<div class="text-muted text-sm">Fehler beim Laden der Metriken.</div>'; }
+  }
+
+  init();
+</script>
+</body>
+</html>
