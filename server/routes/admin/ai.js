@@ -333,4 +333,35 @@ router.post('/auto-campaign', requireAdmin, async (req, res) => {
   }
 });
 
+// ── POST /api/admin/ai/campaign-chat ─────────────────────────────────────────
+router.post('/campaign-chat', requireAdmin, async (req, res) => {
+  const { campaign_id, messages, context } = req.body;
+  if (!messages || !messages.length) return res.status(400).json({ error: 'Nachrichten erforderlich' });
+
+  try {
+    const result = await ai.chatWithCampaign({ messages, context: context || {} });
+
+    if (campaign_id && result.changes) {
+      if (result.changes.ad_creatives && result.changes.ad_creatives.length) {
+        db.prepare('DELETE FROM ad_creatives WHERE campaign_id = ?').run(campaign_id);
+        const ins = db.prepare(`INSERT INTO ad_creatives (campaign_id, type, title, content, platform) VALUES (?,?,?,?,?)`);
+        for (const cr of result.changes.ad_creatives) {
+          ins.run(campaign_id, cr.type, cr.title || cr.type, cr.content, context?.platform || null);
+        }
+      }
+      if (result.changes.strategy) {
+        const existing = db.prepare(`SELECT id FROM ai_analyses WHERE campaign_id = ? AND type = 'strategy'`).get(campaign_id);
+        if (existing) {
+          db.prepare(`UPDATE ai_analyses SET result = ? WHERE id = ?`).run(result.changes.strategy, existing.id);
+        }
+      }
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error('[campaign-chat]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

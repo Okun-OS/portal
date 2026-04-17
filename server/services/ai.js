@@ -437,4 +437,61 @@ ${slotList || '    "headline": "Hauptüberschrift"'}
   return JSON.parse(match[0]);
 }
 
-module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient, generateCampaignPlan, generateAutoSetup };
+// 9. Chat-based campaign refinement
+async function chatWithCampaign({ messages, context }) {
+  const client = getClient();
+
+  const creativesText = (context.ad_creatives || []).map(cr =>
+    `[${(cr.type || '').toUpperCase()}] ${cr.title}: ${cr.content}`
+  ).join('\n');
+
+  const questionsText = (context.qualification_questions || []).map((q, i) =>
+    `${i + 1}. ${q.question} [${(q.options || []).join(' / ')}]`
+  ).join('\n');
+
+  const system = `Du bist ein KI-Assistent für Performance-Marketing. Du hilfst einem Admin, eine Kampagne zu verfeinern.
+
+KAMPAGNE: ${context.campaign_name || 'unbekannt'} | Plattform: ${context.platform || '?'} | Budget: ${context.budget ? context.budget + '€/Monat' : '?'} | Stadt: ${context.city || '?'}
+Zielgruppe: ${context.target_audience || '?'}
+
+STRATEGIE:
+${context.strategy || '(keine)'}
+
+AD-CREATIVES:
+${creativesText || '(keine)'}
+
+VORQUALIFIZIERUNGS-FRAGEN:
+${questionsText || '(keine)'}
+
+Antworte AUSSCHLIESSLICH als JSON:
+{
+  "reply": "Deine Antwort auf Deutsch – was du geändert hast oder beantwortest",
+  "changes": {
+    "ad_creatives": [...],
+    "strategy": "...",
+    "qualification_questions": [...]
+  }
+}
+"changes" weglassen wenn nichts geändert wurde.
+Bei Änderungen immer die VOLLSTÄNDIGE Liste zurückgeben (nicht nur geänderte Einträge).
+Ad-Creative Format: {"type":"hook|headline|body|cta","title":"...","content":"..."}
+Qual-Fragen Format: {"question":"...","type":"radio","options":["...","..."]}`;
+
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: 2048,
+    system,
+    messages: messages.map(m => ({ role: m.role, content: m.content })),
+  });
+
+  const text = msg.content[0].text.trim();
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    return { reply: text };
+  } catch {
+    return { reply: text };
+  }
+}
+
+module.exports = { analyzeStrategy, generateAdCopy, generateFunnelConcept, generateOptimizationTasks, createCompleteCampaign, explainForClient, generateCampaignPlan, generateAutoSetup, chatWithCampaign };
