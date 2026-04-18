@@ -291,6 +291,43 @@ function renderTemplate(templateId, data, trackingFields, dbTracking) {
     html = html.replace(/https?:\/\/[^'"<\s]*\/api\/webhooks\/funnel-lead/gi, '/api/webhooks/funnel-lead');
     html = html.replace(/https?:\/\/deine-domain([^'"<\s]*)/gi, '$1');
 
+    // Inject fetch + XHR interceptor in <head> so customer_id always reaches the
+    // webhook regardless of how the template collects form data.
+    // Values are embedded via JSON.stringify → guaranteed valid JS literals.
+    {
+      const _cid  = JSON.stringify(Number(data.CUSTOMER_ID)  || 0);
+      const _fid  = JSON.stringify(Number(data.FUNNEL_ID)    || 0);
+      const _fsl  = JSON.stringify(String(data.FUNNEL_SLUG   || ''));
+      const _cpid = JSON.stringify(Number(data.CAMPAIGN_ID)  || 0);
+      const interceptScript = `<script id="__portal_intercept">(function(){
+  var _cid=${_cid},_fid=${_fid},_fsl=${_fsl},_cpid=${_cpid};
+  function enrich(body){
+    try{
+      var b=JSON.parse(body);
+      if(!b.customer_id&&_cid)b.customer_id=_cid;
+      if(!b.funnel_id&&_fid)b.funnel_id=_fid;
+      if(!b.funnel_slug&&_fsl)b.funnel_slug=_fsl;
+      if(!b.campaign_id&&_cpid)b.campaign_id=_cpid;
+      return JSON.stringify(b);
+    }catch(e){return body;}
+  }
+  function isFunnelUrl(u){return typeof u==='string'&&u.indexOf('/api/webhooks/funnel-lead')!==-1;}
+  var _F=window.fetch.bind(window);
+  window.fetch=function(url,opts){
+    if(isFunnelUrl(url)&&opts&&opts.body){opts=Object.assign({},opts,{body:enrich(opts.body)});}
+    return _F(url,opts);
+  };
+  var _XO=XMLHttpRequest.prototype.open;
+  var _XS=XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open=function(m,u){this._purl=u;return _XO.apply(this,arguments);};
+  XMLHttpRequest.prototype.send=function(body){
+    if(isFunnelUrl(this._purl)&&body)body=enrich(body);
+    return _XS.call(this,body);
+  };
+})();<\/script>`;
+      html = html.replace(/<\/head>/i, interceptScript + '</head>');
+    }
+
     // Inject lead capture JS before </body>
     html = html.replace(/<\/body>/i, LEAD_CAPTURE_INJECT + '</body>');
   } else {
