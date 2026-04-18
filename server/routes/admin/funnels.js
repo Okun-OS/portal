@@ -192,14 +192,14 @@ const LEAD_CAPTURE_INJECT = `
 
 // ── Helper: build tracking scripts from funnel fields ────────────────────────
 function buildTrackingScripts(fields) {
-  const { metaPixelId, googleTagId, googleAdsConversionId, googleAdsConversionLabel } = fields;
+  const { metaPixelCode, googleTagId, googleAdsConversionId, googleAdsConversionLabel } = fields;
   const hasGtag = googleTagId || googleAdsConversionId;
   let head = '';
   let body = '';
 
-  // Meta Pixel
-  if (metaPixelId) {
-    head += `\n<!-- Meta Pixel -->\n<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${metaPixelId}');fbq('track','PageView');<\/script><noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1"/></noscript>`;
+  // Meta Pixel: inject raw code as-is (no wrapping, no escaping)
+  if (metaPixelCode && metaPixelCode.trim()) {
+    head += '\n' + metaPixelCode.trim();
   }
 
   // Google Tag (GA4 + Ads)
@@ -212,9 +212,9 @@ function buildTrackingScripts(fields) {
   }
 
   // Lead conversion events (fires when thank-you overlay appears)
-  if (metaPixelId || hasGtag) {
+  if (metaPixelCode || hasGtag) {
     let events = '';
-    if (metaPixelId) events += `if(typeof fbq!=='undefined')fbq('track','Lead');`;
+    if (metaPixelCode) events += `if(typeof fbq!=='undefined')fbq('track','Lead');`;
     if (googleTagId) events += `if(typeof gtag!=='undefined')gtag('event','generate_lead');`;
     if (googleAdsConversionId && googleAdsConversionLabel) {
       events += `if(typeof gtag!=='undefined')gtag('event','conversion',{send_to:'${googleAdsConversionId}/${googleAdsConversionLabel}'});`;
@@ -478,7 +478,7 @@ function buildRenderData(funnel, tpl, slugOverride) {
 
   // Extract tracking fields (stored in fields JSON)
   const trackingFields = {
-    metaPixelId:              fields.metaPixelId              || '',
+    metaPixelCode:            fields.metaPixelCode            || '',
     googleTagId:              fields.googleTagId              || '',
     googleAdsConversionId:    fields.googleAdsConversionId    || '',
     googleAdsConversionLabel: fields.googleAdsConversionLabel || '',

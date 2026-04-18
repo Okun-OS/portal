@@ -179,11 +179,12 @@
               <div style="margin-top:24px;padding-top:20px;border-top:1px solid #f3f4f6">
                 <div class="section-title" style="font-size:14px;margin-bottom:4px;color:#6b7280">📊 Tracking <span style="font-size:12px;font-weight:400">(optional)</span></div>
                 <p style="font-size:12px;color:#9ca3af;margin:0 0 14px">Conversion-Tracking pro Funnel. Wird automatisch in die veröffentlichte Seite eingebaut.</p>
+                <div class="form-group" style="margin-bottom:14px">
+                  <label class="form-label">Meta Pixel Basiscode <span style="color:#9ca3af;font-weight:400">(kompletter &lt;script&gt;-Code von Meta)</span></label>
+                  <textarea id="field_metaPixelCode" class="form-control" rows="5" style="font-family:monospace;font-size:11px" placeholder="&lt;script&gt;&#10;!function(f,b,e,v,n,t,s){...}(window, document,'script',...);&#10;fbq('init', 'DEINE_PIXEL_ID');&#10;fbq('track', 'PageView');&#10;&lt;/script&gt;"></textarea>
+                  <div style="font-size:11px;color:#9ca3af;margin-top:4px">Wird 1:1 in den &lt;head&gt; eingefügt. fbq('track','Lead') wird automatisch beim Formular-Submit gefeuert.</div>
+                </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                  <div class="form-group">
-                    <label class="form-label">Meta Pixel ID</label>
-                    <input type="text" id="field_metaPixelId" class="form-control" placeholder="z.B. 1234567890123">
-                  </div>
                   <div class="form-group">
                     <label class="form-label">Google Analytics 4 (GA4)</label>
                     <input type="text" id="field_googleTagId" class="form-control" placeholder="z.B. G-XXXXXXXXXX">
@@ -548,7 +549,7 @@
     if (!optHtml) document.getElementById('optionalFieldsWrap').style.display = 'none';
 
     // Pre-fill tracking fields from existing funnel data
-    const trackingKeys = ['metaPixelId','googleTagId','googleAdsConversionId','googleAdsConversionLabel'];
+    const trackingKeys = ['metaPixelCode','googleTagId','googleAdsConversionId','googleAdsConversionLabel'];
     trackingKeys.forEach(k => {
       const el = document.getElementById('field_' + k);
       if (el) el.value = fields[k] || '';
@@ -565,7 +566,7 @@
       if (v) fields[f.key] = v;
     });
     // Save tracking fields (only if non-empty)
-    const trackingKeys = ['metaPixelId','googleTagId','googleAdsConversionId','googleAdsConversionLabel'];
+    const trackingKeys = ['metaPixelCode','googleTagId','googleAdsConversionId','googleAdsConversionLabel'];
     trackingKeys.forEach(k => {
       const v = document.getElementById('field_' + k)?.value?.trim();
       if (v) fields[k] = v;
