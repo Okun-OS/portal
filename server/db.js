@@ -310,4 +310,17 @@ for (const [key, value] of Object.entries(defaultSettings)) {
   upsertSetting.run(key, value);
 }
 
+// ── funnel_tracking ───────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS funnel_tracking (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    funnel_id        INTEGER UNIQUE NOT NULL,
+    meta_pixel_code  TEXT,
+    google_tag_code  TEXT,
+    event_rules      TEXT NOT NULL DEFAULT '[]',
+    updated_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (funnel_id) REFERENCES funnels(id) ON DELETE CASCADE
+  );
+`);
+
 module.exports = db;

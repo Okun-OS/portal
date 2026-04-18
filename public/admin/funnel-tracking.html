@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tracking-Verwaltung – Okun Leads</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .tracking-grid { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
+    .funnel-list-item { padding: 12px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; border: 1.5px solid transparent; margin-bottom: 6px; transition: all .15s; }
+    .funnel-list-item:hover { background: #f3f4f6; }
+    .funnel-list-item.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: 600; }
+    .funnel-list-item .fl-name { font-weight: 600; margin-bottom: 2px; }
+    .funnel-list-item .fl-sub { font-size: 11px; color: #9ca3af; }
+    .funnel-list-item.active .fl-sub { color: #60a5fa; }
+    .tab-bar { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+    .tab-btn { padding: 8px 18px; font-size: 13px; font-weight: 600; border: none; background: none; cursor: pointer; color: #6b7280; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+    .tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+    .tab-panel { display: none; } .tab-panel.active { display: block; }
+    .code-area { font-family: monospace; font-size: 12px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; width: 100%; resize: vertical; }
+    .rule-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; position: relative; }
+    .rule-card .rm-rule { position: absolute; top: 10px; right: 10px; background: none; border: 1px solid #fca5a5; border-radius: 6px; color: #ef4444; cursor: pointer; font-size: 12px; padding: 2px 8px; }
+    .rule-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .selector-type-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .selector-type-row label { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
+    .event-check-row { display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }
+    .event-check-row label { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .event-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .status-dot.live { background: #22c55e; }
+    .status-dot.draft { background: #f59e0b; }
+    .empty-state { text-align: center; padding: 48px 20px; color: #9ca3af; }
+    .empty-state .es-icon { font-size: 48px; margin-bottom: 12px; }
+    .save-bar { display: flex; gap: 10px; align-items: center; padding-top: 16px; border-top: 1px solid #f3f4f6; margin-top: 20px; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-header"><div class="sidebar-logo"><img src="/img/brand-logo.png" alt="Okun Leads" class="brand-logo-img" onerror="this.style.display='none'"><span class="brand-logo-text">Okun Leads</span><span class="sidebar-badge admin">Admin</span></div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section"><span class="nav-section-label">Übersicht</span></div>
+      <div class="nav-item" onclick="location.href='/admin/'"><span class="nav-icon">&#9732;</span> Dashboard</div>
+      <div class="nav-section"><span class="nav-section-label">Kunden &amp; Leads</span></div>
+      <div class="nav-item" onclick="location.href='/admin/customers.html'"><span class="nav-icon">&#128100;</span> Kunden</div>
+      <div class="nav-item" onclick="location.href='/admin/leads.html'"><span class="nav-icon">&#127919;</span> Leads</div>
+      <div class="nav-section"><span class="nav-section-label">Kampagnen</span></div>
+      <div class="nav-item" onclick="location.href='/admin/campaigns.html'"><span class="nav-icon">&#128202;</span> Kampagnen-Übersicht</div>
+      <div class="nav-item" onclick="location.href='/admin/analytics.html'"><span class="nav-icon">&#128200;</span> Analytics</div>
+      <div class="nav-section"><span class="nav-section-label">Assets</span></div>
+      <div class="nav-item active" onclick="location.href='/admin/funnel-tracking.html'"><span class="nav-icon">&#128247;</span> Tracking</div>
+      <div class="nav-item" onclick="location.href='/admin/funnels.html'"><span class="nav-icon">&#127760;</span> Landing Pages</div>
+      <div class="nav-item" onclick="location.href='/admin/creative-templates.html'"><span class="nav-icon">&#127912;</span> Kreativ-Vorlagen</div>
+      <div class="nav-section"><span class="nav-section-label">Dokumente</span></div>
+      <div class="nav-item" onclick="location.href='/admin/documents.html'"><span class="nav-icon">&#128196;</span> Dokumente</div>
+      <div class="nav-section"><span class="nav-section-label">System</span></div>
+      <div class="nav-item" onclick="location.href='/admin/settings.html'"><span class="nav-icon">&#9881;</span> Einstellungen</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="sidebarAvatar">A</div><div><div class="user-name" id="sidebarUserName">Admin</div><div class="user-role">Administrator</div></div></div>
+      <button class="btn-logout" id="btnLogout">Abmelden</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">📊 Tracking-Verwaltung</h1>
+        <p style="font-size:13px;color:#6b7280;margin:0">Meta Pixel, Google Analytics &amp; Event-Tracking pro Landing Page</p>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="tracking-grid">
+
+        <!-- LEFT: Funnel list -->
+        <div>
+          <div class="card" style="padding:16px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#374151">Landing Pages</div>
+            <input type="text" id="searchInput" class="form-control" placeholder="Suchen..." style="margin-bottom:10px;font-size:13px" oninput="filterFunnels(this.value)">
+            <div id="funnelList" style="max-height:65vh;overflow-y:auto">
+              <div class="empty-state"><div class="es-icon">⏳</div><div>Lade...</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Tracking editor -->
+        <div id="editorPanel">
+          <div class="empty-state card" style="padding:48px">
+            <div class="es-icon">👈</div>
+            <div style="font-size:15px;font-weight:600;margin-bottom:8px">Landing Page auswählen</div>
+            <div style="font-size:13px">Wähle links eine Landing Page aus um Tracking zu konfigurieren.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:9999"></div>
+<script src="/js/api.js"></script>
+<script>
+  requireAuth('admin');
+
+  let allFunnels = [];
+  let currentFunnel = null;
+  let tracking = { meta_pixel_code: '', google_tag_code: '', event_rules: [] };
+
+  async function init() {
+    try {
+      const funnels = await API.get('/api/admin/funnels');
+      allFunnels = funnels.filter(f => f.status === 'published' || f.status === 'draft');
+      renderFunnelList(allFunnels);
+
+      // Auto-select from URL param
+      const urlFunnelId = parseInt(new URLSearchParams(location.search).get('funnel_id'));
+      if (urlFunnelId) {
+        const f = allFunnels.find(x => x.id === urlFunnelId);
+        if (f) selectFunnel(f);
+      }
+    } catch(e) { showToast('Fehler: ' + e.message, 'error'); }
+  }
+
+  function renderFunnelList(list) {
+    if (!list.length) {
+      document.getElementById('funnelList').innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:12px">Keine Landing Pages gefunden</div>';
+      return;
+    }
+    document.getElementById('funnelList').innerHTML = list.map(f => `
+      <div class="funnel-list-item ${currentFunnel?.id === f.id ? 'active' : ''}" onclick="selectFunnel(${JSON.stringify(JSON.stringify(f))})">
+        <div class="fl-name">
+          <span class="status-dot ${f.status === 'published' ? 'live' : 'draft'}"></span>${escHtml(f.name || 'Ohne Name')}
+        </div>
+        <div class="fl-sub">${escHtml(f.company_name || '')} · ${f.status === 'published' ? 'Live' : 'Entwurf'}</div>
+      </div>`).join('');
+  }
+
+  function filterFunnels(q) {
+    const filtered = q ? allFunnels.filter(f =>
+      (f.name || '').toLowerCase().includes(q.toLowerCase()) ||
+      (f.company_name || '').toLowerCase().includes(q.toLowerCase())
+    ) : allFunnels;
+    renderFunnelList(filtered);
+  }
+
+  async function selectFunnel(funnelOrStr) {
+    const f = typeof funnelOrStr === 'string' ? JSON.parse(funnelOrStr) : funnelOrStr;
+    currentFunnel = f;
+    // Re-render list with active state
+    renderFunnelList(allFunnels);
+    showEditor();
+    try {
+      tracking = await API.get('/api/admin/funnels/' + f.id + '/tracking');
+      tracking.event_rules = tracking.event_rules || [];
+      populateEditor();
+    } catch(e) { showToast('Fehler beim Laden: ' + e.message, 'error'); }
+  }
+
+  function showEditor() {
+    document.getElementById('editorPanel').innerHTML = `
+      <div class="card" style="padding:24px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:16px;font-weight:700">${escHtml(currentFunnel.name || 'Landing Page')}</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px">${escHtml(currentFunnel.company_name || '')}
+              ${currentFunnel.slug ? `· <a href="/f/${currentFunnel.slug}/" target="_blank" style="color:var(--primary)">/f/${currentFunnel.slug}/</a>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="previewTracking()">👁 Vorschau</button>
+            <button class="btn btn-primary btn-sm" onclick="saveAndRepublish()">💾 Speichern &amp; Neu veröffentlichen</button>
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('meta',this)">Meta Pixel</button>
+          <button class="tab-btn" onclick="switchTab('google',this)">Google Tracking</button>
+          <button class="tab-btn" onclick="switchTab('events',this)">Event-Regeln</button>
+        </div>
+
+        <!-- Meta Pixel tab -->
+        <div class="tab-panel active" id="tab-meta">
+          <p style="font-size:13px;color:#6b7280;margin:0 0 12px">Füge hier den kompletten Meta Pixel Basiscode ein (inkl. &lt;script&gt;-Tags). Er wird 1:1 in den &lt;head&gt; der Live-Seite eingefügt.</p>
+          <textarea id="metaPixelCode" class="form-control code-area" rows="12" placeholder="<script>&#10;!function(f,b,e,v,n,t,s){...}&#10;fbq('init', 'DEINE_PIXEL_ID');&#10;fbq('track', 'PageView');&#10;</script>"></textarea>
+          <div style="font-size:11px;color:#9ca3af;margin-top:6px">fbq('track','Lead') wird automatisch gefeuert wenn das Formular erfolgreich abgeschickt wird.</div>
+        </div>
+
+        <!-- Google tab -->
+        <div class="tab-panel" id="tab-google">
+          <p style="font-size:13px;color:#6b7280;margin:0 0 12px">Füge hier den Google Tag / GA4 Code ein (inkl. &lt;script&gt;-Tags). Wird in den &lt;head&gt; eingefügt.</p>
+          <textarea id="googleTagCode" class="form-control code-area" rows="12" placeholder="<!-- Google tag (gtag.js) -->&#10;<script async src='https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX'></script>&#10;<script>&#10;  window.dataLayer = window.dataLayer || [];&#10;  function gtag(){dataLayer.push(arguments);}&#10;  gtag('js', new Date());&#10;  gtag('config', 'G-XXXXXXXXXX');&#10;</script>"></textarea>
+          <div style="font-size:11px;color:#9ca3af;margin-top:6px">gtag('event','generate_lead') wird automatisch beim erfolgreichen Formular-Submit ausgelöst.</div>
+        </div>
+
+        <!-- Events tab -->
+        <div class="tab-panel" id="tab-events">
+          <p style="font-size:13px;color:#6b7280;margin:0 0 16px">Definiere auf welche Elemente der Seite welche Tracking-Events gefeuert werden sollen.</p>
+          <div id="eventRulesList"></div>
+          <button class="btn btn-outline" onclick="addRule()" style="margin-top:4px">+ Event-Regel hinzufügen</button>
+        </div>
+      </div>`;
+
+    populateEditor();
+  }
+
+  function populateEditor() {
+    const mpEl = document.getElementById('metaPixelCode');
+    const gtEl = document.getElementById('googleTagCode');
+    if (mpEl) mpEl.value = tracking.meta_pixel_code || '';
+    if (gtEl) gtEl.value = tracking.google_tag_code || '';
+    renderRules();
+  }
+
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  // ── Event Rules ─────────────────────────────────────────────────────────────
+  function renderRules() {
+    const el = document.getElementById('eventRulesList');
+    if (!el) return;
+    if (!tracking.event_rules.length) {
+      el.innerHTML = '<div style="font-size:13px;color:#9ca3af;margin-bottom:12px">Noch keine Event-Regeln. Klicke "+ Event-Regel hinzufügen".</div>';
+      return;
+    }
+    el.innerHTML = tracking.event_rules.map((r, i) => `
+      <div class="rule-card" id="rule_${i}">
+        <button class="rm-rule" onclick="removeRule(${i})">✕ Entfernen</button>
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">Regel ${i+1}</div>
+
+        <div class="selector-type-row">
+          <label><input type="radio" name="st_${i}" value="text" ${(r.selectorType||'text')==='text'?'checked':''} onchange="updateRule(${i},'selectorType',this.value)"> Nach Text</label>
+          <label><input type="radio" name="st_${i}" value="css"  ${r.selectorType==='css'?'checked':''}  onchange="updateRule(${i},'selectorType',this.value)"> CSS-Selektor</label>
+        </div>
+
+        <div class="rule-row">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" style="font-size:11px">${(r.selectorType||'text')==='css' ? 'CSS-Selektor' : 'Button-Text (enthält)'}</label>
+            <input class="form-control" value="${escHtml(r.selector||'')}" placeholder="${r.selectorType==='css'?'z.B. button.cta, #submit-btn':'z.B. Jetzt kostenlos'}" onchange="updateRule(${i},'selector',this.value)">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" style="font-size:11px">Auslöser</label>
+            <select class="form-control" onchange="updateRule(${i},'trigger',this.value)">
+              <option value="click" ${(r.trigger||'click')==='click'?'selected':''}>Klick</option>
+              <option value="mouseenter" ${r.trigger==='mouseenter'?'selected':''}>Hover</option>
+              <option value="submit" ${r.trigger==='submit'?'selected':''}>Formular-Submit</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;margin-bottom:6px;font-size:11px;font-weight:700;color:#374151">Events:</div>
+        <div class="event-check-row">
+          <label><input type="checkbox" ${r.metaEvent?'checked':''} onchange="toggleMetaEvent(${i},this.checked)"> Meta</label>
+          <label><input type="checkbox" ${r.googleEvent?'checked':''} onchange="toggleGoogleEvent(${i},this.checked)"> Google</label>
+        </div>
+        <div class="event-input-row">
+          <div class="form-group" style="margin-bottom:0;${r.metaEvent!==undefined?'':'display:none'}" id="meta_ev_${i}">
+            <label class="form-label" style="font-size:11px">Meta Event Name</label>
+            <input class="form-control" value="${escHtml(r.metaEvent||'Lead')}" placeholder="z.B. Lead" onchange="updateRule(${i},'metaEvent',this.value)">
+          </div>
+          <div class="form-group" style="margin-bottom:0;${r.googleEvent!==undefined?'':'display:none'}" id="google_ev_${i}">
+            <label class="form-label" style="font-size:11px">Google Event Name</label>
+            <input class="form-control" value="${escHtml(r.googleEvent||'generate_lead')}" placeholder="z.B. generate_lead" onchange="updateRule(${i},'googleEvent',this.value)">
+          </div>
+        </div>
+        ${r.customCode !== undefined ? `
+        <div class="form-group" style="margin-top:8px;margin-bottom:0">
+          <label class="form-label" style="font-size:11px">Custom JS (optional)</label>
+          <input class="form-control" style="font-family:monospace;font-size:11px" value="${escHtml(r.customCode||'')}" placeholder="z.B. dataLayer.push({event:'custom'})" onchange="updateRule(${i},'customCode',this.value)">
+        </div>` : ''}
+      </div>`).join('');
+  }
+
+  function addRule() {
+    tracking.event_rules.push({ selectorType: 'text', selector: '', trigger: 'click', metaEvent: 'Lead', googleEvent: 'generate_lead' });
+    renderRules();
+  }
+
+  function removeRule(i) {
+    tracking.event_rules.splice(i, 1);
+    renderRules();
+  }
+
+  function updateRule(i, key, val) {
+    tracking.event_rules[i][key] = val;
+  }
+
+  function toggleMetaEvent(i, checked) {
+    if (checked) { tracking.event_rules[i].metaEvent = 'Lead'; }
+    else { delete tracking.event_rules[i].metaEvent; }
+    document.getElementById('meta_ev_' + i).style.display = checked ? '' : 'none';
+  }
+
+  function toggleGoogleEvent(i, checked) {
+    if (checked) { tracking.event_rules[i].googleEvent = 'generate_lead'; }
+    else { delete tracking.event_rules[i].googleEvent; }
+    document.getElementById('google_ev_' + i).style.display = checked ? '' : 'none';
+  }
+
+  // ── Save & Republish ─────────────────────────────────────────────────────────
+  function collectForm() {
+    tracking.meta_pixel_code = document.getElementById('metaPixelCode')?.value || '';
+    tracking.google_tag_code  = document.getElementById('googleTagCode')?.value || '';
+    // event_rules already updated live via updateRule()
+  }
+
+  async function saveAndRepublish() {
+    if (!currentFunnel) return;
+    collectForm();
+    try {
+      await API.put('/api/admin/funnels/' + currentFunnel.id + '/tracking', tracking);
+      await API.post('/api/admin/funnels/' + currentFunnel.id + '/publish', {});
+      showToast('Gespeichert &amp; neu veröffentlicht ✓');
+      // Update funnel status in list
+      const f = allFunnels.find(x => x.id === currentFunnel.id);
+      if (f) f.status = 'published';
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function previewTracking() {
+    if (!currentFunnel) return;
+    collectForm();
+    try {
+      await API.put('/api/admin/funnels/' + currentFunnel.id + '/tracking', tracking);
+    } catch {}
+    window.open('/api/admin/funnels/' + currentFunnel.id + '/preview', '_blank');
+  }
+
+  function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  init();
+</script>
+</body>
+</html>

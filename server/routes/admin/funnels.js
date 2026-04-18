@@ -190,20 +190,31 @@ const LEAD_CAPTURE_INJECT = `
 <\/script>
 `;
 
-// ── Helper: build tracking scripts from funnel fields ────────────────────────
-function buildTrackingScripts(fields) {
-  const { metaPixelCode, googleTagId, googleAdsConversionId, googleAdsConversionLabel } = fields;
-  const hasGtag = googleTagId || googleAdsConversionId;
+// ── Helper: build tracking scripts ───────────────────────────────────────────
+// cfg = { metaPixelCode, googleTagCode, eventRules }
+// fieldTracking = legacy fields-based tracking (metaPixelCode, googleTagId, etc.)
+function buildTrackingScripts(fieldTracking, dbTracking) {
+  // DB tracking takes precedence over field-based tracking
+  const metaPixelCode  = (dbTracking && dbTracking.meta_pixel_code)  || fieldTracking.metaPixelCode  || '';
+  const googleTagCode  = (dbTracking && dbTracking.google_tag_code)   || '';
+  const googleTagId    = fieldTracking.googleTagId              || '';
+  const googleAdsConversionId    = fieldTracking.googleAdsConversionId    || '';
+  const googleAdsConversionLabel = fieldTracking.googleAdsConversionLabel || '';
+  const eventRules = (dbTracking && JSON.parse(dbTracking.event_rules || '[]')) || [];
+
+  const hasGtag = googleTagCode || googleTagId || googleAdsConversionId;
   let head = '';
   let body = '';
 
-  // Meta Pixel: inject raw code as-is (no wrapping, no escaping)
-  if (metaPixelCode && metaPixelCode.trim()) {
+  // Meta Pixel: inject raw code 1:1 (no wrapping, no escaping)
+  if (metaPixelCode.trim()) {
     head += '\n' + metaPixelCode.trim();
   }
 
-  // Google Tag (GA4 + Ads)
-  if (hasGtag) {
+  // Google Tag: raw code block takes priority, else build from IDs
+  if (googleTagCode && googleTagCode.trim()) {
+    head += '\n' + googleTagCode.trim();
+  } else if (googleTagId || googleAdsConversionId) {
     const firstId = googleTagId || googleAdsConversionId;
     head += `\n<!-- Google Tag -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=${firstId}"><\/script>\n<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());`;
     if (googleTagId) head += `gtag('config','${googleTagId}');`;
@@ -211,22 +222,28 @@ function buildTrackingScripts(fields) {
     head += `<\/script>`;
   }
 
-  // Lead conversion events (fires when thank-you overlay appears)
+  // Lead conversion events on thank-you overlay
   if (metaPixelCode || hasGtag) {
-    let events = '';
-    if (metaPixelCode) events += `if(typeof fbq!=='undefined')fbq('track','Lead');`;
-    if (googleTagId) events += `if(typeof gtag!=='undefined')gtag('event','generate_lead');`;
+    let leEvents = '';
+    if (metaPixelCode) leEvents += `if(typeof fbq!=='undefined')fbq('track','Lead');`;
+    if (googleTagId || googleTagCode) leEvents += `if(typeof gtag!=='undefined')gtag('event','generate_lead');`;
     if (googleAdsConversionId && googleAdsConversionLabel) {
-      events += `if(typeof gtag!=='undefined')gtag('event','conversion',{send_to:'${googleAdsConversionId}/${googleAdsConversionLabel}'});`;
+      leEvents += `if(typeof gtag!=='undefined')gtag('event','conversion',{send_to:'${googleAdsConversionId}/${googleAdsConversionLabel}'});`;
     }
-    body += `\n<!-- Portal Tracking Lead Event -->\n<script>(function(){var el=document.getElementById('__portal_thankyou');if(!el)return;new MutationObserver(function(m){m.forEach(function(x){if(x.attributeName==='style'&&el.style.display!=='none'&&!el._tk){el._tk=true;${events}}});}).observe(el,{attributes:true});})();<\/script>`;
+    body += `\n<!-- Portal Lead Event -->\n<script>(function(){var el=document.getElementById('__portal_thankyou');if(!el)return;new MutationObserver(function(m){m.forEach(function(x){if(x.attributeName==='style'&&el.style.display!=='none'&&!el._tk){el._tk=true;${leEvents}}});}).observe(el,{attributes:true});})();<\/script>`;
+  }
+
+  // Event rules: bind JS events to elements by CSS selector or text match
+  if (eventRules.length) {
+    const rulesJson = JSON.stringify(eventRules);
+    body += `\n<!-- Portal Event Rules -->\n<script>(function(){var rules=${rulesJson};function bindRules(){rules.forEach(function(r){var els=[];if(r.selectorType==='text'){els=Array.from(document.querySelectorAll('button,a,[role="button"],input[type="submit"]')).filter(function(el){return(el.innerText||el.textContent||'').trim().toLowerCase().indexOf((r.selector||'').toLowerCase())>-1;});}else{try{els=Array.from(document.querySelectorAll(r.selector||''));}catch(e){}}els.forEach(function(el){if(el._ptBound)return;el._ptBound=true;el.addEventListener(r.trigger||'click',function(){if(r.metaEvent&&typeof fbq!=='undefined')fbq('track',r.metaEvent);if(r.googleEvent&&typeof gtag!=='undefined')gtag('event',r.googleEvent);if(r.customCode){try{(new Function(r.customCode))();}catch(e){}}});});});}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',bindRules);}else{bindRules();}})();<\/script>`;
   }
 
   return { head, body };
 }
 
 // ── Helper: render template HTML ─────────────────────────────────────────────
-function renderTemplate(templateId, data, trackingFields) {
+function renderTemplate(templateId, data, trackingFields, dbTracking) {
   const tpl = getTemplate(templateId);
   if (!tpl) throw new Error('Template nicht gefunden: ' + templateId);
 
@@ -283,9 +300,9 @@ function renderTemplate(templateId, data, trackingFields) {
     return data[key] ? content : '';
   });
 
-  // Inject tracking scripts (head + body) if tracking fields provided
-  if (trackingFields) {
-    const { head, body } = buildTrackingScripts(trackingFields);
+  // Inject tracking scripts (head + body)
+  if (trackingFields || dbTracking) {
+    const { head, body } = buildTrackingScripts(trackingFields || {}, dbTracking || null);
     if (head) html = html.replace(/<\/head>/i, head + '\n</head>');
     if (body) html = html.replace(/<\/body>/i, body + '\n</body>');
   }
@@ -508,8 +525,9 @@ router.post('/:id/preview', requireAdmin, (req, res) => {
   if (!funnel) return res.status(404).json({ error: 'Funnel nicht gefunden' });
   const tpl = getTemplate(funnel.template_id);
   const { renderData, trackingFields } = buildRenderData(funnel, tpl);
+  const dbTracking = db.prepare('SELECT * FROM funnel_tracking WHERE funnel_id = ?').get(funnel.id);
   try {
-    const html = renderTemplate(funnel.template_id, renderData, trackingFields);
+    const html = renderTemplate(funnel.template_id, renderData, trackingFields, dbTracking);
     res.send(html);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -523,13 +541,37 @@ router.get('/:id/preview', requireAdmin, (req, res) => {
   const tpl = getTemplate(funnel.template_id);
   const slug = funnel.slug || 'preview';
   const { renderData, trackingFields } = buildRenderData(funnel, tpl, slug);
+  const dbTracking = db.prepare('SELECT * FROM funnel_tracking WHERE funnel_id = ?').get(funnel.id);
   try {
-    const html = renderTemplate(funnel.template_id, renderData, trackingFields);
+    const html = renderTemplate(funnel.template_id, renderData, trackingFields, dbTracking);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   } catch (e) {
     res.status(500).send('Vorschau-Fehler: ' + e.message);
   }
+});
+
+// ── GET /api/admin/funnels/:id/tracking ──────────────────────────────────────
+router.get('/:id/tracking', requireAdmin, (req, res) => {
+  const row = db.prepare('SELECT * FROM funnel_tracking WHERE funnel_id = ?').get(req.params.id);
+  if (!row) return res.json({ funnel_id: parseInt(req.params.id), meta_pixel_code: '', google_tag_code: '', event_rules: [] });
+  res.json({ ...row, event_rules: JSON.parse(row.event_rules || '[]') });
+});
+
+// ── PUT /api/admin/funnels/:id/tracking ──────────────────────────────────────
+router.put('/:id/tracking', requireAdmin, (req, res) => {
+  const funnelId = parseInt(req.params.id);
+  const { meta_pixel_code, google_tag_code, event_rules } = req.body;
+  db.prepare(`
+    INSERT INTO funnel_tracking (funnel_id, meta_pixel_code, google_tag_code, event_rules, updated_at)
+    VALUES (?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(funnel_id) DO UPDATE SET
+      meta_pixel_code = excluded.meta_pixel_code,
+      google_tag_code = excluded.google_tag_code,
+      event_rules     = excluded.event_rules,
+      updated_at      = excluded.updated_at
+  `).run(funnelId, meta_pixel_code || '', google_tag_code || '', JSON.stringify(event_rules || []));
+  res.json({ success: true });
 });
 
 // ── POST /api/admin/funnels/:id/publish ──────────────────────────────────────
@@ -540,9 +582,10 @@ router.post('/:id/publish', requireAdmin, (req, res) => {
   const tpl = getTemplate(funnel.template_id);
   const slug = funnel.slug || uuidv4().split('-')[0] + '-' + funnel.id;
   const { renderData, trackingFields } = buildRenderData(funnel, tpl, slug);
+  const dbTracking = db.prepare('SELECT * FROM funnel_tracking WHERE funnel_id = ?').get(funnel.id);
 
   try {
-    const html = renderTemplate(funnel.template_id, renderData, trackingFields);
+    const html = renderTemplate(funnel.template_id, renderData, trackingFields, dbTracking);
     const outDir = path.join(__dirname, '../../../public/f', slug);
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(path.join(outDir, 'index.html'), html, 'utf8');
