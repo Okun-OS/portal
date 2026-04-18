@@ -592,6 +592,55 @@ router.put('/:id/tracking', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ── POST /api/admin/funnels/:id/test-lead ────────────────────────────────────
+// Admin-only: simulate a lead submission from this funnel to verify the pipeline
+router.post('/:id/test-lead', requireAdmin, (req, res) => {
+  const funnel = db.prepare('SELECT * FROM funnels WHERE id = ?').get(req.params.id);
+  if (!funnel) return res.status(404).json({ error: 'Funnel nicht gefunden' });
+
+  if (!funnel.customer_id) {
+    return res.status(400).json({ error: 'Funnel hat keine customer_id — Funnel-Daten prüfen' });
+  }
+
+  const diagnostics = {
+    funnel_id: funnel.id,
+    funnel_name: funnel.name,
+    customer_id: funnel.customer_id,
+    campaign_id: funnel.campaign_id,
+    slug: funnel.slug,
+    status: funnel.status,
+  };
+
+  // Check customer exists
+  const customer = db.prepare('SELECT id, company_name FROM customers WHERE id = ?').get(funnel.customer_id);
+  if (!customer) {
+    return res.status(400).json({ error: `Kunde mit id=${funnel.customer_id} existiert nicht in DB`, diagnostics });
+  }
+  diagnostics.customer_name = customer.company_name;
+
+  try {
+    // Try full insert with funnel columns
+    let result;
+    try {
+      result = db.prepare(`
+        INSERT INTO leads (customer_id, campaign_id, funnel_id, funnel_slug, name, email, phone, source, notes, status, quality)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'Funnel (Test)', ?, 'new', 'normal')
+      `).run(funnel.customer_id, funnel.campaign_id || null, funnel.id, funnel.slug || null,
+             'Test Lead (bitte löschen)', 'test@test.de', '0000 000000', 'Automatischer Test');
+    } catch (e) {
+      // Fallback without funnel columns
+      result = db.prepare(`
+        INSERT INTO leads (customer_id, campaign_id, name, email, phone, source, notes, status, quality)
+        VALUES (?, ?, ?, ?, ?, 'Funnel (Test)', ?, 'new', 'normal')
+      `).run(funnel.customer_id, funnel.campaign_id || null,
+             'Test Lead (bitte löschen)', 'test@test.de', '0000 000000', 'Automatischer Test – Spalten fehlen: ' + e.message);
+    }
+    res.json({ success: true, lead_id: result.lastInsertRowid, diagnostics });
+  } catch (err) {
+    res.status(500).json({ error: err.message, diagnostics });
+  }
+});
+
 // ── POST /api/admin/funnels/:id/publish ──────────────────────────────────────
 router.post('/:id/publish', requireAdmin, (req, res) => {
   const funnel = db.prepare('SELECT * FROM funnels WHERE id = ?').get(req.params.id);

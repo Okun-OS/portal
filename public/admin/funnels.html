@@ -249,6 +249,7 @@
               <span class="card-title">Vorschau &amp; Veröffentlichen</span>
               <div style="display:flex;gap:8px">
                 <button class="btn btn-secondary btn-sm" onclick="loadPreview()">&#8635; Vorschau aktualisieren</button>
+                <button class="btn btn-secondary btn-sm" onclick="testLead()" style="background:#f59e0b;color:#fff;border-color:#f59e0b" title="Sendet einen Test-Lead um zu prüfen ob die Pipeline funktioniert">&#9654; Lead testen</button>
                 <button class="btn btn-primary btn-sm" id="btnPublish" onclick="publishFunnel()">&#127919; Funnel veröffentlichen</button>
               </div>
             </div>
@@ -678,6 +679,20 @@
       const html = await res.text();
       frame.srcdoc = html;
     } catch(e) { showToast('Vorschau-Fehler: ' + e.message, 'error'); }
+  }
+
+  async function testLead() {
+    if (!currentFunnel) return;
+    try {
+      const res = await API.post('/api/admin/funnels/' + currentFunnel.id + '/test-lead', {});
+      if (res.success) {
+        showToast('✅ Test-Lead #' + res.lead_id + ' erfolgreich gespeichert! Jetzt unter "Leads" sichtbar. (Bitte danach löschen)', 'success');
+      } else {
+        showToast('Fehler: ' + (res.error || 'Unbekannt'), 'error');
+      }
+    } catch(e) {
+      showToast('Lead-Test fehlgeschlagen: ' + e.message, 'error');
+    }
   }
 
   async function publishFunnel() {
