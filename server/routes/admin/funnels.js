@@ -300,6 +300,16 @@ function renderTemplate(templateId, data, trackingFields, dbTracking) {
     html = fs.readFileSync(tplPath, 'utf8');
   }
 
+  // For custom templates: inject portal identity as hidden fields into every
+  // <form> so the template's own FormData-based handler always sends customer_id.
+  if (tpl.source === 'custom') {
+    const hf = (n, v) => `<input type="hidden" name="${n}" value="${String(v||'').replace(/"/g,'&quot;')}">`;
+    html = html.replace(/<form(\b[^>]*)?>/gi, (m) =>
+      m + hf('customer_id', data.CUSTOMER_ID) + hf('campaign_id', data.CAMPAIGN_ID)
+        + hf('funnel_id', data.FUNNEL_ID)     + hf('funnel_slug', data.FUNNEL_SLUG)
+    );
+  }
+
   // Build form fields HTML (only relevant for static file-based templates)
   const formFields = ((tpl.form_definition || {}).fields || []).map(f => {
     if (f.type === 'textarea') {
@@ -310,12 +320,40 @@ function renderTemplate(templateId, data, trackingFields, dbTracking) {
 
   html = html.replace('{{FORM_FIELDS}}', formFields);
 
-  // Replace all {{placeholders}} with data values
-  html = html.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+  // Replace {{placeholders}} context-aware:
+  // – HTML context (outside <script>): insert value as-is
+  // – JS context (inside <script>): escape quotes/backslashes so values with
+  //   double-quotes (e.g. AI headlines) don't break JS string literals.
+  //   Exception: keys ending in _JSON are raw JS expressions, inserted as-is.
+  const replaceInHtml = (s) => s.replace(/\{\{([^}]+)\}\}/g, (m, key) => {
     key = key.trim();
-    if (key in data) return data[key] !== null && data[key] !== undefined ? data[key] : '';
+    if (key in data && data[key] !== null && data[key] !== undefined) return String(data[key]);
     return '';
   });
+  const replaceInScript = (s) => s.replace(/\{\{([^}]+)\}\}/g, (m, key) => {
+    key = key.trim();
+    const val = (key in data && data[key] !== null && data[key] !== undefined) ? String(data[key]) : '';
+    if (!val) return key.endsWith('_JSON') ? '[]' : '';
+    if (key.endsWith('_JSON')) return val; // raw JSON expression — never quote-escape
+    return val.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n');
+  });
+
+  // Split into alternating [html, script, html, script, ...] segments
+  const segments = [];
+  let cursor = 0;
+  const scriptTagRe = /<script(\b[^>]*)>([\s\S]*?)<\/script>/gi;
+  let sm;
+  while ((sm = scriptTagRe.exec(html)) !== null) {
+    segments.push({ js: false, text: html.slice(cursor, sm.index) });
+    segments.push({ js: true,  text: `<script${sm[1]}>${sm[2]}</script>`, attrs: sm[1], body: sm[2] });
+    cursor = sm.index + sm[0].length;
+  }
+  segments.push({ js: false, text: html.slice(cursor) });
+
+  html = segments.map(seg => {
+    if (!seg.js) return replaceInHtml(seg.text);
+    return `<script${seg.attrs}>${replaceInScript(seg.body)}</script>`;
+  }).join('');
 
   // Process {{#if key}}...{{/if}} blocks
   html = html.replace(/\{\{#if ([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match, key, content) => {
