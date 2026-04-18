@@ -196,21 +196,29 @@ router.post('/:id/send-welcome', requireAdmin, async (req, res) => {
 
 // PUT /api/admin/customers/:id/reset-password
 router.put('/:id/reset-password', requireAdmin, (req, res) => {
-  const { new_password } = req.body;
-  if (!new_password || new_password.length < 6) {
-    return res.status(400).json({ error: 'Passwort muss mindestens 6 Zeichen haben' });
+  try {
+    const { new_password } = req.body;
+    if (!new_password || new_password.length < 6) {
+      return res.status(400).json({ error: 'Passwort muss mindestens 6 Zeichen haben' });
+    }
+
+    const customer = db.prepare('SELECT user_id FROM customers WHERE id = ?').get(req.params.id);
+    if (!customer) {
+      return res.status(404).json({ error: 'Kunde nicht gefunden' });
+    }
+    if (!customer.user_id) {
+      return res.status(400).json({ error: 'Dieser Kunde hat noch kein Login. Bitte zuerst Login erstellen.' });
+    }
+
+    const hash = bcrypt.hashSync(new_password, 10);
+    db.prepare("UPDATE users SET password = ?, updated_at = datetime('now') WHERE id = ?")
+      .run(hash, Number(customer.user_id));
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[reset-password] error:', err.message);
+    res.status(500).json({ error: 'Fehler beim Zurücksetzen: ' + err.message });
   }
-
-  const customer = db.prepare('SELECT user_id FROM customers WHERE id = ?').get(req.params.id);
-  if (!customer || !customer.user_id) {
-    return res.status(404).json({ error: 'Kein Login für diesen Kunden vorhanden' });
-  }
-
-  const hash = bcrypt.hashSync(new_password, 10);
-  db.prepare('UPDATE users SET password = ?, updated_at = datetime("now") WHERE id = ?')
-    .run(hash, customer.user_id);
-
-  res.json({ success: true });
 });
 
 // DELETE /api/admin/customers/:id
