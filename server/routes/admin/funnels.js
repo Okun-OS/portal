@@ -131,6 +131,8 @@ const LEAD_CAPTURE_INJECT = `
 
   function sendLead(contactData){
     var notes=Object.keys(answers).map(function(k){ return k+': '+answers[k]; }).join(' | ');
+    var btn=document.getElementById('__pq_submit');
+    if(btn){ btn.disabled=true; btn.textContent='Wird gesendet…'; }
     fetch('/api/webhooks/funnel-lead',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -142,12 +144,28 @@ const LEAD_CAPTURE_INJECT = `
         funnel_id:funnelId, funnel_slug:'{{FUNNEL_SLUG}}',
         customer_id:customerId, campaign_id:campaignId||undefined,
       })
-    }).then(function(r){return r.json();}).then(function(){
+    }).then(function(r){
+      if(!r.ok) return r.json().then(function(d){ throw new Error(d.error||('HTTP '+r.status)); });
+      return r.json();
+    }).then(function(d){
+      if(!d.success) throw new Error('Lead nicht gespeichert');
       var m=document.getElementById('__pq_modal');
       if(m) m.style.display='none';
       var ty=document.getElementById('__portal_thankyou');
       if(ty) ty.style.display='flex';
-    }).catch(function(){});
+    }).catch(function(err){
+      console.error('[Portal Lead]', err&&err.message||err);
+      if(btn){ btn.disabled=false; btn.textContent='Erneut versuchen'; }
+      var msg=document.getElementById('__pq_err');
+      if(!msg){
+        msg=document.createElement('p');
+        msg.id='__pq_err';
+        msg.style.cssText='color:#dc2626;font-size:13px;margin-top:8px;text-align:center';
+        var form=document.getElementById('__pq_form');
+        if(form) form.appendChild(msg);
+      }
+      msg.textContent='Übermittlung fehlgeschlagen. Bitte erneut versuchen.';
+    });
   }
 
   // Close modal on backdrop click

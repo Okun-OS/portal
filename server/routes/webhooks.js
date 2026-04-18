@@ -156,26 +156,50 @@ router.post('/funnel-lead', (req, res) => {
   try {
     const { name, email, phone, message, funnel_id, funnel_slug, customer_id, campaign_id } = req.body;
 
-    if (!customer_id) return res.status(400).json({ error: 'customer_id fehlt' });
+    console.log('[funnel-lead] incoming:', { customer_id, campaign_id, funnel_id, name, email, phone });
+
+    if (!customer_id) {
+      console.warn('[funnel-lead] rejected: customer_id fehlt');
+      return res.status(400).json({ error: 'customer_id fehlt' });
+    }
 
     const leadName = name || 'Unbekannt';
 
-    const result = db.prepare(`
-      INSERT INTO leads (customer_id, campaign_id, funnel_id, funnel_slug, name, email, phone, source, notes, status, quality)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'Funnel', ?, 'new', 'normal')
-    `).run(
-      customer_id,
-      campaign_id || null,
-      funnel_id || null,
-      funnel_slug || null,
-      leadName,
-      email || null,
-      phone || null,
-      message || null
-    );
+    let result;
+    try {
+      result = db.prepare(`
+        INSERT INTO leads (customer_id, campaign_id, funnel_id, funnel_slug, name, email, phone, source, notes, status, quality)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'Funnel', ?, 'new', 'normal')
+      `).run(
+        customer_id,
+        campaign_id || null,
+        funnel_id || null,
+        funnel_slug || null,
+        leadName,
+        email || null,
+        phone || null,
+        message || null
+      );
+    } catch (insertErr) {
+      console.warn('[funnel-lead] full insert failed, trying fallback:', insertErr.message);
+      // Fallback: insert without funnel_id/funnel_slug (in case migrations haven't run yet)
+      result = db.prepare(`
+        INSERT INTO leads (customer_id, campaign_id, name, email, phone, source, notes, status, quality)
+        VALUES (?, ?, ?, ?, ?, 'Funnel', ?, 'new', 'normal')
+      `).run(
+        customer_id,
+        campaign_id || null,
+        leadName,
+        email || null,
+        phone || null,
+        message || null
+      );
+    }
 
+    console.log('[funnel-lead] saved lead_id:', result.lastInsertRowid);
     res.status(201).json({ success: true, lead_id: result.lastInsertRowid });
   } catch (err) {
+    console.error('[funnel-lead] error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
