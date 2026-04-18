@@ -185,11 +185,10 @@ const LEAD_CAPTURE_INJECT = `
     }
   },true);
 
-  // Intercept CTA button / anchor clicks
-  // When qualSteps exist → open qual modal
-  // When no qualSteps → collect nearest form data and send lead directly
+  // Intercept CTA button / anchor clicks to open qualification modal
   var CTA_RE=/anfra|bewert|angebot|jetzt starten|kontakt|kostenlos|termin|anfang/i;
   document.addEventListener('click',function(e){
+    if(qualSteps.length===0) return;
     var el=e.target;
     for(var i=0;i<6&&el&&el!==document.body;i++){
       var tag=(el.tagName||'').toUpperCase();
@@ -200,16 +199,7 @@ const LEAD_CAPTURE_INJECT = `
              || CTA_RE.test(txt);
       if(isCTA){
         e.preventDefault(); e.stopPropagation();
-        if(qualSteps.length>0){
-          openModal();
-        } else {
-          // Find nearest parent form and submit its data
-          var p=el, form=null;
-          while(p&&p!==document.body){ if(p.tagName==='FORM'){form=p;break;} p=p.parentElement; }
-          if(form){ var d={}; new FormData(form).forEach(function(v,k){d[k]=v;}); sendLead(d); }
-          else { openModal(); }
-        }
-        return;
+        openModal(); return;
       }
       el=el.parentElement;
     }
@@ -293,14 +283,13 @@ function renderTemplate(templateId, data, trackingFields, dbTracking) {
       if (/framersite|__framer|FramerBridge|bootstrap\.[a-f0-9]{10}/.test(body)) {
         return '<!-- framer-inline-removed -->';
       }
-      // Remove any template-owned form/lead submission handlers so they don't
-      // compete with LEAD_CAPTURE_INJECT. Catches hardcoded placeholder domains
-      // like "deine-domain" and any absolute /api/webhooks references.
-      if (/\/api\/webhooks|funnel-lead|deine-domain/.test(body)) {
-        return '<!-- lead-handler-removed -->';
-      }
       return match;
     });
+
+    // Fix any hardcoded placeholder or absolute webhook URLs in template scripts
+    // so the template's own form handler (if present) posts to the correct endpoint.
+    html = html.replace(/https?:\/\/[^'"<\s]*\/api\/webhooks\/funnel-lead/gi, '/api/webhooks/funnel-lead');
+    html = html.replace(/https?:\/\/deine-domain([^'"<\s]*)/gi, '$1');
 
     // Inject lead capture JS before </body>
     html = html.replace(/<\/body>/i, LEAD_CAPTURE_INJECT + '</body>');
