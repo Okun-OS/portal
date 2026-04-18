@@ -163,41 +163,44 @@ router.post('/funnel-lead', (req, res) => {
       return res.status(400).json({ error: 'customer_id fehlt' });
     }
 
-    const leadName = name || 'Unbekannt';
-
-    let result;
-    try {
-      result = db.prepare(`
-        INSERT INTO leads (customer_id, campaign_id, funnel_id, funnel_slug, name, email, phone, source, notes, status, quality)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'Funnel', ?, 'new', 'normal')
-      `).run(
-        customer_id,
-        campaign_id || null,
-        funnel_id || null,
-        funnel_slug || null,
-        leadName,
-        email || null,
-        phone || null,
-        message || null
-      );
-    } catch (insertErr) {
-      console.warn('[funnel-lead] full insert failed, trying fallback:', insertErr.message);
-      // Fallback: insert without funnel_id/funnel_slug (in case migrations haven't run yet)
-      result = db.prepare(`
-        INSERT INTO leads (customer_id, campaign_id, name, email, phone, source, notes, status, quality)
-        VALUES (?, ?, ?, ?, ?, 'Funnel', ?, 'new', 'normal')
-      `).run(
-        customer_id,
-        campaign_id || null,
-        leadName,
-        email || null,
-        phone || null,
-        message || null
-      );
+    // Validate customer exists (FK enforcement is ON — avoid hard crash)
+    const custRow = db.prepare('SELECT id FROM customers WHERE id = ?').get(customer_id);
+    if (!custRow) {
+      console.error('[funnel-lead] customer not found:', customer_id);
+      return res.status(400).json({ error: `Kunde ${customer_id} nicht gefunden` });
     }
 
-    console.log('[funnel-lead] saved lead_id:', result.lastInsertRowid);
-    res.status(201).json({ success: true, lead_id: result.lastInsertRowid });
+    // Validate optional FKs — use NULL if the referenced row doesn't exist
+    // (avoids SQLITE_CONSTRAINT_FOREIGNKEY on campaign_id / funnel_id)
+    const safeCampaignId = campaign_id
+      ? (db.prepare('SELECT id FROM campaigns WHERE id = ?').get(campaign_id) ? Number(campaign_id) : null)
+      : null;
+    const safeFunnelId = funnel_id
+      ? (db.prepare('SELECT id FROM funnels WHERE id = ?').get(funnel_id) ? Number(funnel_id) : null)
+      : null;
+
+    const leadName = name || 'Unbekannt';
+
+    // Minimal INSERT using only columns that have always existed in the schema
+    const result = db.prepare(`
+      INSERT INTO leads (customer_id, campaign_id, name, email, phone, source, status, quality)
+      VALUES (?, ?, ?, ?, ?, 'Funnel', 'new', 'normal')
+    `).run(Number(customer_id), safeCampaignId, leadName, email || null, phone || null);
+
+    const leadId = result.lastInsertRowid;
+
+    // Best-effort UPDATE for optional columns that may not exist yet
+    const optUpdates = [
+      ['UPDATE leads SET notes = ? WHERE id = ?',       [message || null,      leadId]],
+      ['UPDATE leads SET funnel_id = ? WHERE id = ?',   [safeFunnelId,         leadId]],
+      ['UPDATE leads SET funnel_slug = ? WHERE id = ?', [funnel_slug || null,  leadId]],
+    ];
+    for (const [sql, params] of optUpdates) {
+      try { db.prepare(sql).run(...params); } catch { /* column may not exist */ }
+    }
+
+    console.log('[funnel-lead] saved lead_id:', leadId);
+    res.status(201).json({ success: true, lead_id: leadId });
   } catch (err) {
     console.error('[funnel-lead] error:', err.message);
     res.status(500).json({ error: err.message });
