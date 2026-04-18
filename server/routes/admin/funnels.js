@@ -190,8 +190,43 @@ const LEAD_CAPTURE_INJECT = `
 <\/script>
 `;
 
+// ── Helper: build tracking scripts from funnel fields ────────────────────────
+function buildTrackingScripts(fields) {
+  const { metaPixelId, googleTagId, googleAdsConversionId, googleAdsConversionLabel } = fields;
+  const hasGtag = googleTagId || googleAdsConversionId;
+  let head = '';
+  let body = '';
+
+  // Meta Pixel
+  if (metaPixelId) {
+    head += `\n<!-- Meta Pixel -->\n<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${metaPixelId}');fbq('track','PageView');<\/script><noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1"/></noscript>`;
+  }
+
+  // Google Tag (GA4 + Ads)
+  if (hasGtag) {
+    const firstId = googleTagId || googleAdsConversionId;
+    head += `\n<!-- Google Tag -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=${firstId}"><\/script>\n<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());`;
+    if (googleTagId) head += `gtag('config','${googleTagId}');`;
+    if (googleAdsConversionId) head += `gtag('config','${googleAdsConversionId}');`;
+    head += `<\/script>`;
+  }
+
+  // Lead conversion events (fires when thank-you overlay appears)
+  if (metaPixelId || hasGtag) {
+    let events = '';
+    if (metaPixelId) events += `if(typeof fbq!=='undefined')fbq('track','Lead');`;
+    if (googleTagId) events += `if(typeof gtag!=='undefined')gtag('event','generate_lead');`;
+    if (googleAdsConversionId && googleAdsConversionLabel) {
+      events += `if(typeof gtag!=='undefined')gtag('event','conversion',{send_to:'${googleAdsConversionId}/${googleAdsConversionLabel}'});`;
+    }
+    body += `\n<!-- Portal Tracking Lead Event -->\n<script>(function(){var el=document.getElementById('__portal_thankyou');if(!el)return;new MutationObserver(function(m){m.forEach(function(x){if(x.attributeName==='style'&&el.style.display!=='none'&&!el._tk){el._tk=true;${events}}});}).observe(el,{attributes:true});})();<\/script>`;
+  }
+
+  return { head, body };
+}
+
 // ── Helper: render template HTML ─────────────────────────────────────────────
-function renderTemplate(templateId, data) {
+function renderTemplate(templateId, data, trackingFields) {
   const tpl = getTemplate(templateId);
   if (!tpl) throw new Error('Template nicht gefunden: ' + templateId);
 
@@ -247,6 +282,13 @@ function renderTemplate(templateId, data) {
     key = key.trim();
     return data[key] ? content : '';
   });
+
+  // Inject tracking scripts (head + body) if tracking fields provided
+  if (trackingFields) {
+    const { head, body } = buildTrackingScripts(trackingFields);
+    if (head) html = html.replace(/<\/head>/i, head + '\n</head>');
+    if (body) html = html.replace(/<\/body>/i, body + '\n</body>');
+  }
 
   return html;
 }
@@ -434,7 +476,15 @@ function buildRenderData(funnel, tpl, slugOverride) {
     { name: 'email', label: 'E-Mail-Adresse', type: 'email', required: false },
   ];
 
-  return {
+  // Extract tracking fields (stored in fields JSON)
+  const trackingFields = {
+    metaPixelId:              fields.metaPixelId              || '',
+    googleTagId:              fields.googleTagId              || '',
+    googleAdsConversionId:    fields.googleAdsConversionId    || '',
+    googleAdsConversionLabel: fields.googleAdsConversionLabel || '',
+  };
+
+  const renderData = {
     ...fields,
     ...textSlots,
     ...imageSlots,
@@ -445,22 +495,21 @@ function buildRenderData(funnel, tpl, slugOverride) {
     privacy_text:     (tpl.form_definition || {}).privacy_text || '',
     danke_headline:   (tpl.thank_you_page  || {}).headline || 'Vielen Dank!',
     danke_text:       (tpl.thank_you_page  || {}).text     || 'Wir melden uns in Kürze.',
-    // These get embedded as JSON literals in the injected script
     QUAL_STEPS_JSON:  JSON.stringify(qualSteps),
     FORM_FIELDS_JSON: JSON.stringify(formFields),
   };
+
+  return { renderData, trackingFields };
 }
 
 // ── POST /api/admin/funnels/:id/preview ──────────────────────────────────────
 router.post('/:id/preview', requireAdmin, (req, res) => {
   const funnel = db.prepare('SELECT * FROM funnels WHERE id = ?').get(req.params.id);
   if (!funnel) return res.status(404).json({ error: 'Funnel nicht gefunden' });
-
   const tpl = getTemplate(funnel.template_id);
-  const data = buildRenderData(funnel, tpl);
-
+  const { renderData, trackingFields } = buildRenderData(funnel, tpl);
   try {
-    const html = renderTemplate(funnel.template_id, data);
+    const html = renderTemplate(funnel.template_id, renderData, trackingFields);
     res.send(html);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -468,15 +517,14 @@ router.post('/:id/preview', requireAdmin, (req, res) => {
 });
 
 // ── GET /api/admin/funnels/:id/preview ──────────────────────────────────────
-// Renders the funnel HTML in-memory and returns it (no publish, no file write)
 router.get('/:id/preview', requireAdmin, (req, res) => {
   const funnel = db.prepare('SELECT * FROM funnels WHERE id = ?').get(req.params.id);
   if (!funnel) return res.status(404).send('Funnel nicht gefunden');
   const tpl = getTemplate(funnel.template_id);
   const slug = funnel.slug || 'preview';
-  const data = buildRenderData(funnel, tpl, slug);
+  const { renderData, trackingFields } = buildRenderData(funnel, tpl, slug);
   try {
-    const html = renderTemplate(funnel.template_id, data);
+    const html = renderTemplate(funnel.template_id, renderData, trackingFields);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   } catch (e) {
@@ -490,12 +538,11 @@ router.post('/:id/publish', requireAdmin, (req, res) => {
   if (!funnel) return res.status(404).json({ error: 'Funnel nicht gefunden' });
 
   const tpl = getTemplate(funnel.template_id);
-  // Generate slug if not set
   const slug = funnel.slug || uuidv4().split('-')[0] + '-' + funnel.id;
-  const data = buildRenderData(funnel, tpl, slug);
+  const { renderData, trackingFields } = buildRenderData(funnel, tpl, slug);
 
   try {
-    const html = renderTemplate(funnel.template_id, data);
+    const html = renderTemplate(funnel.template_id, renderData, trackingFields);
     const outDir = path.join(__dirname, '../../../public/f', slug);
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(path.join(outDir, 'index.html'), html, 'utf8');

@@ -174,6 +174,31 @@
                 <div class="section-title" style="font-size:14px;margin-bottom:12px;color:#6b7280">Optionale Felder <span style="font-size:12px;font-weight:400">(erhöhen die Qualität)</span></div>
                 <div id="optionalFields"></div>
               </div>
+
+              <!-- Tracking -->
+              <div style="margin-top:24px;padding-top:20px;border-top:1px solid #f3f4f6">
+                <div class="section-title" style="font-size:14px;margin-bottom:4px;color:#6b7280">📊 Tracking <span style="font-size:12px;font-weight:400">(optional)</span></div>
+                <p style="font-size:12px;color:#9ca3af;margin:0 0 14px">Conversion-Tracking pro Funnel. Wird automatisch in die veröffentlichte Seite eingebaut.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div class="form-group">
+                    <label class="form-label">Meta Pixel ID</label>
+                    <input type="text" id="field_metaPixelId" class="form-control" placeholder="z.B. 1234567890123">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Google Analytics 4 (GA4)</label>
+                    <input type="text" id="field_googleTagId" class="form-control" placeholder="z.B. G-XXXXXXXXXX">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Google Ads Conversion ID</label>
+                    <input type="text" id="field_googleAdsConversionId" class="form-control" placeholder="z.B. AW-XXXXXXXXX">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Google Ads Conversion Label</label>
+                    <input type="text" id="field_googleAdsConversionLabel" class="form-control" placeholder="z.B. AbCdEfGhIj">
+                  </div>
+                </div>
+              </div>
+
               <div style="display:flex;gap:10px;margin-top:16px">
                 <button class="btn btn-secondary" onclick="goStep(1)">&#8592; Zurück</button>
                 <button class="btn btn-primary" onclick="saveFields()">Speichern &amp; Weiter &#8594;</button>
@@ -521,6 +546,13 @@
     `).join('');
     document.getElementById('optionalFields').innerHTML = optHtml;
     if (!optHtml) document.getElementById('optionalFieldsWrap').style.display = 'none';
+
+    // Pre-fill tracking fields from existing funnel data
+    const trackingKeys = ['metaPixelId','googleTagId','googleAdsConversionId','googleAdsConversionLabel'];
+    trackingKeys.forEach(k => {
+      const el = document.getElementById('field_' + k);
+      if (el) el.value = fields[k] || '';
+    });
   }
 
   async function saveFields() {
@@ -531,6 +563,12 @@
     (currentTemplate.optional_fields || []).forEach(f => {
       const v = document.getElementById('field_' + f.key)?.value;
       if (v) fields[f.key] = v;
+    });
+    // Save tracking fields (only if non-empty)
+    const trackingKeys = ['metaPixelId','googleTagId','googleAdsConversionId','googleAdsConversionLabel'];
+    trackingKeys.forEach(k => {
+      const v = document.getElementById('field_' + k)?.value?.trim();
+      if (v) fields[k] = v;
     });
     try {
       await API.put('/api/admin/funnels/' + currentFunnel.id + '/data', { fields });
