@@ -17,9 +17,9 @@ router.get('/', requireClient, (req, res) => {
       SELECT c.*,
         (SELECT COUNT(*) FROM leads WHERE campaign_id = c.id) as lead_count,
         (SELECT COUNT(*) FROM leads WHERE campaign_id = c.id AND status = 'closed') as closed_leads
-      FROM campaigns
-      WHERE customer_id = ?
-      ORDER BY created_at DESC
+      FROM campaigns c
+      WHERE c.customer_id = ?
+      ORDER BY c.created_at DESC
     `).all(customerId);
 
     const result = campaigns.map(c => {
