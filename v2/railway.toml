@@ -1,0 +1,13 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "cd v2 && pnpm install --frozen-lockfile && pnpm build --filter @okun/web"
+
+[deploy]
+startCommand = "cd v2/apps/web && node .next/standalone/server.js"
+healthcheckPath = "/api/trpc/workspaces.getCurrent"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[env]
+NODE_ENV = "production"
