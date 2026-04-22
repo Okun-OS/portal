@@ -58,6 +58,20 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: 'ai',
+    label: 'KI',
+    items: [
+      {
+        id: 'copilot',
+        label: 'Copilot',
+        href: '/copilot',
+        icon: 'Bot',
+        keywords: ['copilot', 'ai', 'assistent', 'chat'],
+        badge: 'NEU',
+      },
+    ],
+  },
+  {
     id: 'billing',
     label: 'Abrechnung',
     items: [
