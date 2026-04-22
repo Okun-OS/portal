@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Providers } from '../lib/providers';
+import { Toaster } from 'sonner';
 import '@okun/ui/globals.css';
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </Providers>
         </ClerkProvider>
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );

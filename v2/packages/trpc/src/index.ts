@@ -1,11 +1,16 @@
 import { createTRPCRouter } from './server';
 import { leadsRouter } from './routers/leads';
 import { workspacesRouter } from './routers/workspaces';
+import { customersRouter } from './routers/customers';
+import { campaignsRouter } from './routers/campaigns';
+import { billingRouter } from './routers/billing';
 
 export const appRouter = createTRPCRouter({
   leads: leadsRouter,
   workspaces: workspacesRouter,
-  // Phase 1+: customers, campaigns, billing, etc.
+  customers: customersRouter,
+  campaigns: campaignsRouter,
+  billing: billingRouter,
 });
 
 export type AppRouter = typeof appRouter;
