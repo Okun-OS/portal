@@ -1,0 +1,46 @@
+{
+  "name": "Okun Leads v2",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+
+  "postCreateCommand": "npm install -g pnpm@9 && cd /workspaces/portal/v2 && pnpm install",
+
+  "postStartCommand": "bash /workspaces/portal/v2/.devcontainer/setup.sh",
+
+  "forwardPorts": [3001],
+  "portsAttributes": {
+    "3001": {
+      "label": "Okun Leads v2",
+      "onAutoForward": "openBrowser"
+    }
+  },
+
+  "secrets": {
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": { "description": "Clerk Publishable Key (pk_test_...)" },
+    "CLERK_SECRET_KEY": { "description": "Clerk Secret Key (sk_test_...)" },
+    "DATABASE_URL": { "description": "PostgreSQL URL (postgresql://...)" },
+    "ANTHROPIC_API_KEY": { "description": "Anthropic API Key (sk-ant-...)" }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "prisma.prisma",
+        "ms-vscode.vscode-typescript-next"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "typescript.preferences.importModuleSpecifier": "non-relative"
+      }
+    }
+  }
+}
