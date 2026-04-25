@@ -68,6 +68,28 @@ app.use('/api/client/documents', require('./routes/client/documents'));
 app.use('/api/client/settings', require('./routes/client/settings'));
 app.use('/api/client/explain', require('./routes/client/explain'));
 
+// Public funnel route – served dynamically from DB (survives redeploys)
+const { getTemplate } = require('./funnelTemplates');
+app.get('/f/:slug', (req, res) => {
+  try {
+    const funnel = db.prepare('SELECT * FROM funnels WHERE slug = ?').get(req.params.slug);
+    if (!funnel) return res.status(404).send('Landingpage nicht gefunden.');
+
+    const tpl = getTemplate(funnel.template_id);
+    const { renderTemplate, buildRenderData } = require('./routes/admin/funnels');
+    const { renderData, trackingFields } = buildRenderData(funnel, tpl, funnel.slug);
+    const dbTracking = db.prepare('SELECT * FROM funnel_tracking WHERE funnel_id = ?').get(funnel.id);
+
+    const html = renderTemplate(funnel.template_id, renderData, trackingFields, dbTracking);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.send(html);
+  } catch (e) {
+    console.error('[/f/:slug]', e.message);
+    res.status(500).send('Fehler beim Laden der Seite.');
+  }
+});
+
 // SPA fallback – serve index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
