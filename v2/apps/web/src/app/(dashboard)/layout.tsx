@@ -8,7 +8,7 @@ import { CommandPalette } from '@okun/ui';
 import { NAV_GROUPS, ALL_NAV_ITEMS } from '../../config/navigation';
 import {
   Kanban, Building2, Megaphone, Filter, FileText, Settings,
-  Menu, X, ChevronRight,
+  Menu, X, ChevronRight, Bot,
 } from 'lucide-react';
 import { cn } from '@okun/ui';
 
@@ -19,6 +19,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Filter: <Filter className="size-4" />,
   FileText: <FileText className="size-4" />,
   Settings: <Settings className="size-4" />,
+  Bot: <Bot className="size-4" />,
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -102,7 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* User */}
-        <div className="px-4 py-3 border-t border-[var(--color-surface-3)] flex items-center gap-3">
+        <div className="px-4 py-3 border-t border-[var(--color-surface-3)] flex items-center gap-3" suppressHydrationWarning>
           <UserButton afterSignOutUrl="/sign-in" />
           <button
             className="ml-auto text-[var(--color-content-tertiary)] hover:text-[var(--color-content-primary)] transition-colors"
