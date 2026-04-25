@@ -12,6 +12,23 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
+// ── Health Check – für UptimeRobot / Railway ─────────────────────────────────
+app.get('/api/health', (req, res) => {
+  try {
+    const funnelCount = db.prepare('SELECT COUNT(*) as count FROM funnels').get().count;
+    const activeFunnels = db.prepare("SELECT slug FROM funnels WHERE status = 'published' OR slug IS NOT NULL LIMIT 5").all();
+    res.json({
+      status: 'ok',
+      ts: new Date().toISOString(),
+      db: 'connected',
+      funnels: funnelCount,
+      activeSlugs: activeFunnels.map(f => f.slug).filter(Boolean),
+    });
+  } catch (e) {
+    res.status(500).json({ status: 'error', error: e.message });
+  }
+});
+
 // API routes
 app.use('/api/auth', require('./routes/auth'));
 
