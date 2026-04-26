@@ -55,6 +55,14 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: 'Filter',
         keywords: ['funnels', 'landing pages'],
       },
+      {
+        id: 'creatives',
+        label: 'Creatives',
+        href: '/creatives',
+        icon: 'Wand2',
+        keywords: ['creatives', 'bilder', 'ads', 'werbemittel', 'grafiken', 'dalle'],
+        badge: 'NEU',
+      },
     ],
   },
   {

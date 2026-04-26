@@ -8,7 +8,7 @@ import { CommandPalette } from '@okun/ui';
 import { NAV_GROUPS, ALL_NAV_ITEMS } from '../../config/navigation';
 import {
   Kanban, Building2, Megaphone, Filter, FileText, Settings,
-  Menu, X, ChevronRight, Bot,
+  Menu, X, ChevronRight, Bot, Wand2,
 } from 'lucide-react';
 import { cn } from '@okun/ui';
 
@@ -20,6 +20,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   FileText: <FileText className="size-4" />,
   Settings: <Settings className="size-4" />,
   Bot: <Bot className="size-4" />,
+  Wand2: <Wand2 className="size-4" />,
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

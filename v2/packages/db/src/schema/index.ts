@@ -4,3 +4,4 @@ export * from './leads';
 export * from './campaigns';
 export * from './billing';
 export * from './events';
+export * from './creatives';

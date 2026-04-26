@@ -24,7 +24,8 @@
     "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": { "description": "Clerk Publishable Key (pk_test_...)" },
     "CLERK_SECRET_KEY": { "description": "Clerk Secret Key (sk_test_...)" },
     "DATABASE_URL": { "description": "PostgreSQL URL (postgresql://...)" },
-    "ANTHROPIC_API_KEY": { "description": "Anthropic API Key (sk-ant-...)" }
+    "ANTHROPIC_API_KEY": { "description": "Anthropic API Key (sk-ant-...)" },
+    "OPENAI_API_KEY": { "description": "OpenAI API Key für DALL-E 3 Creatives (sk-...)" }
   },
 
   "customizations": {

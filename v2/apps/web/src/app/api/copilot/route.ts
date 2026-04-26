@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@okun/db';
 import { leads, customers, campaigns, invoices } from '@okun/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { generateCreativeSet } from '@/lib/integrations/openai-images';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -33,6 +34,22 @@ const TOOLS: Anthropic.Tool[] = [
     name: 'get_invoices_summary',
     description: 'Hole Rechnungsübersicht',
     input_schema: { type: 'object' as const, properties: { status: { type: 'string' } } },
+  },
+  {
+    name: 'generate_creatives',
+    description: 'Generiere Werbe-Creatives mit DALL-E 3 in allen Formaten (Feed 1:1, Stories 9:16, Display 16:9). Nutze dieses Tool wenn der User Bilder, Creatives, Werbemittel oder Ad-Grafiken erstellen möchte. Erstelle einen präzisen englischen DALL-E Prompt basierend auf der Kampagne und dem gewünschten Hook.',
+    input_schema: {
+      type: 'object' as const,
+      required: ['hookConcept', 'hookType', 'dallePrompt'],
+      properties: {
+        campaignId: { type: 'string', description: 'Optional: ID der zugehörigen Kampagne' },
+        hookConcept: { type: 'string', description: 'Der Hook-Text für das Creative, z.B. "Noch keine Käufer für deine Immobilie?"' },
+        hookType: { type: 'string', enum: ['pain', 'social_proof', 'curiosity', 'offer'], description: 'Art des Hooks' },
+        adCopy: { type: 'string', description: 'Optional: Headline + Fließtext für die Anzeige' },
+        dallePrompt: { type: 'string', description: 'Englischer DALL-E 3 Prompt — präzise, visuell, ohne Text im Bild. Beispiel: "Professional real estate photography of a modern German house at golden hour, warm lighting, inviting atmosphere, photorealistic, high quality"' },
+        formats: { type: 'array', items: { type: 'string', enum: ['square', 'story', 'landscape'] }, description: 'Optional: Formate. Default: alle drei (square=Feed, story=Reels, landscape=Display)' },
+      },
+    },
   },
 ];
 
@@ -73,6 +90,31 @@ async function executeTool(name: string, input: Record<string, any>, workspaceId
         id: i.id, number: i.invoiceNumber, status: i.status, grossAmount: i.grossAmount, dueDate: i.dueDate,
       })));
     }
+    case 'generate_creatives': {
+      try {
+        const result = await generateCreativeSet({
+          workspaceId,
+          campaignId: input.campaignId,
+          hookConcept: input.hookConcept,
+          hookType: input.hookType,
+          adCopy: input.adCopy,
+          dallePrompt: input.dallePrompt,
+          formats: input.formats,
+        });
+        return JSON.stringify({
+          success: true,
+          setId: result.setId,
+          hookConcept: result.hookConcept,
+          imagesGenerated: result.succeeded,
+          imagesFailed: result.failed,
+          images: result.images,
+          viewUrl: '/creatives',
+          note: 'Bilder sind unter /creatives abrufbar. Die URLs sind ca. 1 Stunde gültig.',
+        });
+      } catch (e: any) {
+        return JSON.stringify({ success: false, error: e.message });
+      }
+    }
     default:
       return JSON.stringify({ error: 'Unknown tool' });
   }
@@ -100,6 +142,14 @@ export async function POST(req: NextRequest) {
           max_tokens: 4096,
           system: `Du bist Okun Copilot, ein KI-Assistent für die Okun Leads Plattform.
 Du hilfst dabei Leads, Kunden, Kampagnen und Rechnungen zu analysieren und Empfehlungen zu geben.
+Du kannst außerdem Werbe-Creatives (Bilder) mit DALL-E 3 generieren — in allen gängigen Ad-Formaten (Feed, Stories, Display).
+
+Wenn der User Creatives möchte:
+1. Frage kurz nach Branche, Zielgruppe und gewünschtem Hook-Typ (falls nicht klar)
+2. Schlage 2-3 Hook-Konzepte vor und lass den User wählen (oder generiere direkt wenn er "alle" sagt)
+3. Erstelle einen präzisen englischen DALL-E Prompt — photorealistisch, KEIN Text im Bild
+4. Rufe generate_creatives auf — ein Call pro Hook-Konzept
+
 Antworte immer auf Deutsch. Sei präzise und hilfreich.
 Aktueller Workspace: ${workspaceId}`,
           tools: TOOLS,
